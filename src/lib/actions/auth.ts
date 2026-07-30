@@ -1,0 +1,35 @@
+"use server";
+
+import { eq } from "drizzle-orm";
+import { redirect } from "next/navigation";
+
+import { db } from "@/db";
+import { admins } from "@/db/schema";
+import { verifyPassword } from "@/lib/password";
+import { createSession, destroySession } from "@/lib/session";
+import { loginSchema } from "@/lib/validators";
+
+export type LoginState = { error?: string };
+
+export async function login(_prev: LoginState, formData: FormData): Promise<LoginState> {
+  const parsed = loginSchema.safeParse({
+    email: formData.get("email") ?? "",
+    password: formData.get("password") ?? "",
+  });
+
+  // A wrong email and a wrong password return the same message on purpose —
+  // telling them apart would let anyone enumerate valid accounts.
+  const generic = { error: "Email yoki parol noto'g'ri" };
+  if (!parsed.success) return generic;
+
+  const admin = db.select().from(admins).where(eq(admins.email, parsed.data.email)).get();
+  if (!admin || !verifyPassword(parsed.data.password, admin.passwordHash)) return generic;
+
+  await createSession({ id: admin.id, email: admin.email, name: admin.name });
+  redirect("/admin");
+}
+
+export async function logout() {
+  await destroySession();
+  redirect("/admin/login");
+}

@@ -1,0 +1,171 @@
+@import "tailwindcss";
+
+/* ============================================================
+   OBSIDIAN — design tokens
+   Dark-primary. Hierarchy comes from luminance, not decoration.
+   Contrast measured against --color-void (#050607):
+     text-primary   18.2:1   AAA
+     text-secondary  9.2:1   AAA
+     text-tertiary   4.9:1   AA
+   ============================================================ */
+
+@theme {
+  /* surfaces */
+  --color-void: #050607;
+  --color-base: #0a0c0f;
+  --color-s1: #101317;
+  --color-s2: #171b21;
+  --color-s3: #1f242b;
+  --color-raised: #262c34;
+
+  /* borders */
+  --color-line: #1c2128;
+  --color-line-2: #262d36;
+  --color-line-3: #38414d;
+
+  /* text */
+  --color-tp: #f4f6f8;
+  --color-ts: #a8b1bc;
+  --color-tt: #757f8c;
+  --color-td: #454d57;
+
+  /* accent — gold */
+  --color-gold-100: #f5e6c8;
+  --color-gold-300: #e3c48a;
+  --color-gold: #c8a96a;
+  --color-gold-700: #8f7440;
+  --color-gold-900: #4a3b1f;
+
+  /* secondary — azure (cold light) */
+  --color-azure-300: #9ec5ff;
+  --color-azure: #4a8fe7;
+  --color-azure-700: #2a5b99;
+
+  /* status */
+  --color-ok: #4ade80;
+  --color-ok-bg: #0f2a1a;
+  --color-warn: #fbbf24;
+  --color-warn-bg: #2a2010;
+  --color-bad: #f87171;
+  --color-bad-bg: #2e1416;
+  --color-info: #60a5fa;
+  --color-info-bg: #0f1e33;
+
+  /* type */
+  --font-display: var(--font-instrument-serif), Didot, Georgia, serif;
+  --font-sans: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, Menlo, monospace;
+
+  /* motion */
+  --ease-cinematic: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-standard: cubic-bezier(0.32, 0.72, 0, 1);
+
+  /* radius */
+  --radius-card: 16px;
+  --radius-metric: 12px;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    background: var(--color-void);
+    color: var(--color-tp);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+  ::selection {
+    background: var(--color-gold);
+    color: var(--color-void);
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-gold);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+  /* Field autofill must not repaint to the browser's white */
+  input:-webkit-autofill,
+  textarea:-webkit-autofill {
+    -webkit-text-fill-color: var(--color-tp);
+    -webkit-box-shadow: 0 0 0 1000px var(--color-s2) inset;
+    caret-color: var(--color-tp);
+  }
+}
+
+@layer utilities {
+  .label {
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-tt);
+  }
+  .gold-rule {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--color-gold), transparent);
+  }
+  .glass {
+    background: rgb(23 27 33 / 0.72);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
+  /* Hides the scrollbar on horizontal snap rails without killing the scroll */
+  .rail {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .rail::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* The one shaped light source the whole design is built around. */
+.shaft {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(180deg, rgb(158 197 255 / 0.16), rgb(158 197 255 / 0) 70%);
+  filter: blur(46px);
+  pointer-events: none;
+}
+.pool {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgb(200 169 106 / 0.2), transparent 65%);
+  filter: blur(40px);
+  pointer-events: none;
+}
+
+/* Reveal-on-scroll. Sections settle once and never re-animate. */
+.reveal {
+  opacity: 0;
+  transform: translateY(24px);
+  transition:
+    opacity 0.72s var(--ease-cinematic),
+    transform 0.72s var(--ease-cinematic);
+}
+.reveal.in {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: opacity 0.16s linear;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
