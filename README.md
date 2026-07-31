@@ -97,3 +97,55 @@ Kodda ataylab qilingan, izohlangan ikki qaror bor:
    qilish butun dinamik daraxtni aksiyaning o'z render bosqichi ichida qayta
    renderga majburlaydi va javob oqimi qulflanadi. O'rniga sahifa darajasidagi
    tor bekor qilish qo'llaniladi.
+
+---
+
+## Kinematik hero (scroll-scrub)
+
+Bosh sahifadagi birinchi ekran — video emas, **kadrlar ketma-ketligi**. Vaqtni
+foydalanuvchi boshqaradi: scroll pozitsiyasi to'g'ridan-to'g'ri kadr indeksiga
+bog'langan. Scroll to'xtasa, sahna aynan o'sha kadrda qotadi; orqaga scroll
+qilinsa, animatsiya ham orqaga qaytadi. Avtomatik ijro yo'q.
+
+**Aktivlar.** `public/hero/hd` (1280×720, 134 kadr, 3.6 MB) va `public/hero/sd`
+(720×405, 1.5 MB). Manba videodan qayta yaratish:
+
+```bash
+FF=$(node -p "require('ffmpeg-static')")
+"$FF" -v error -i manba.mp4 -vsync 0 /tmp/f/%04d.png
+for f in /tmp/f/*.png; do n=$(basename "$f" .png)
+  cwebp -quiet -q 76 -resize 1280 0 "$f" -o public/hero/hd/$n.webp
+  cwebp -quiet -q 70 -resize 720 0 "$f" -o public/hero/sd/$n.webp
+done
+```
+Keyin `public/hero/manifest.json` dagi `total` ni yangilang.
+
+**Arxitektura sabablari.** Har biri ataylab tanlangan:
+
+- **Canvas 2D, WebGL emas.** Kontent — tekis kadr ketma-ketligi; WebGL har
+  kadrda tekstura yuklashni qo'shadi va vizual yutuq bermaydi.
+- **`HTMLImageElement`, `ImageBitmap` emas.** 1280×720 RGBA bitta kadrda
+  3.7 MB joy egallaydi — 134 kadr ~500 MB bo'lib, mobil brauzerni o'ldiradi.
+  Image obyekti faqat siqilgan baytlarni ushlaydi va dekodlangan nusxani
+  brauzerning o'zi xotira bosimida tozalaydi.
+- **Ikki bosqichli yuklash.** Avval har 8-kadr — scrub bir necha yuz millisekundda
+  ishlay boshlaydi; keyin oraliqlar, har doim playhead'ga eng yaqinidan.
+  Kerakli kadr hali kelmagan bo'lsa, eng yaqin tayyor kadr chiziladi — kanvas
+  hech qachon bo'sh qolmaydi.
+- **Dekodlash oynasi.** Playhead atrofidagi ±12 kadr oldindan `decode()`
+  qilinadi, shuning uchun yetib borilganda rasterlash kutilmaydi.
+- **Interfeys DOM orqali yangilanadi.** Har kadrda `setState` chaqirish sekundiga
+  60 marta React render qilar va kadr byudjetini yeb qo'yardi.
+- **GSAP ScrollTrigger ishlatilmadi.** Bu yerda kerak bo'lgani — bitta rAF sikli,
+  inersiyali playhead va yuklash navbati; kutubxona qo'shimcha bayt olib kelib,
+  lerp ustidan nazoratni kamaytirardi.
+
+**Ovoz.** Yozib olingan trek emas — Web Audio'da sintez qilinadi. Sabab: fayl
+o'rtasida to'xtatilgan musiqa buzilgandek eshitiladi. Bu yerda garmoniya,
+filtr va oktava scroll **pozitsiyasining** funksiyasi, shuning uchun to'xtasangiz
+tovush ham aynan o'sha yerda qotadi — uni oldinga suradigan soat yo'q. Shamol
+qatlami scroll **tezligiga** bog'langan. Brauzerlar avtoijroni bloklagani uchun
+ovoz «Ovoz» tugmasi bosilgandan keyin yonadi.
+
+**Qisqartirilgan harakat.** `prefers-reduced-motion: reduce` yoqilgan bo'lsa
+scrub butunlay o'chadi va bitta statik kadr ko'rsatiladi.

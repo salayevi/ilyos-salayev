@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import { Availability } from "@/components/site/availability";
-import { Portrait } from "@/components/site/media-frame";
+import { CinematicHero } from "@/components/hero/cinematic-hero";
 import { ProjectCard } from "@/components/site/project-card";
 import { Reveal } from "@/components/site/reveal";
 import { getFeaturedProjects, getServices, getSettings, getTestimonials } from "@/lib/queries";
@@ -21,64 +21,40 @@ export default function HomePage() {
 
   return (
     <>
-      {/* ---------------- hero ---------------- */}
+      {/* ---------------- cinematic hero ---------------- */}
+      <CinematicHero
+        eyebrow={s.heroEyebrow}
+        line1={s.heroLine1}
+        line2={s.heroLine2}
+        accent={s.heroAccent}
+      />
+
+      {/* ---------------- landing after the sequence ---------------- */}
       <section className="relative overflow-hidden">
-        <div aria-hidden className="shaft h-[640px] w-[430px] md:h-[1100px] md:w-[900px]" />
-        <div
-          aria-hidden
-          className="pool hidden md:block"
-          style={{ width: 900, height: 700, right: -60, top: 180 }}
-        />
+        <div aria-hidden className="shaft h-[520px] w-[430px] md:h-[760px] md:w-[820px]" />
+        <div className="relative z-10 mx-auto max-w-[1440px] px-5 pt-16 md:px-10 md:pt-24 lg:px-20">
+          <p className="max-w-[620px] text-lg leading-[1.7] text-ts md:text-xl">{s.heroSubline}</p>
 
-        <div className="relative z-10 mx-auto max-w-[1440px] md:flex md:min-h-[820px] md:items-stretch">
-          <div className="px-5 pt-11 md:w-[56%] md:px-10 md:pt-32 lg:px-20 lg:pt-[150px]">
-            <div className="flex items-center gap-3">
-              <span aria-hidden className="h-px w-6 bg-gold" />
-              <p className="label text-[10px] md:text-xs">{s.heroEyebrow}</p>
-            </div>
-
-            <h1 className="mt-5 font-display text-[56px] leading-[0.98] tracking-[-0.03em] text-balance md:mt-8 md:text-[92px] lg:text-[118px] lg:leading-[0.94]">
-              {s.heroLine1}
-              <br />
-              {s.heroLine2} <span className="text-gold">{s.heroAccent}</span>
-            </h1>
-
-            <p className="mt-5 max-w-[480px] text-base leading-[1.7] text-ts md:mt-7 md:text-lg">
-              {s.heroSubline}
-            </p>
-
-            <div className="mt-7 flex flex-wrap gap-3 md:mt-11 md:gap-4">
-              <Link
-                href="/work"
-                className="inline-flex h-12 items-center rounded-lg bg-gold px-6 text-[15px] font-medium text-void transition-colors hover:bg-gold-300"
-              >
-                Ishlarni ko&apos;rish
-              </Link>
-              <Link
-                href="/about"
-                className="inline-flex h-12 items-center gap-2.5 rounded-lg border border-line-2 px-5 text-[15px] font-medium transition-colors hover:border-line-3 hover:bg-s2"
-              >
-                Men haqimda <span className="text-gold">&rarr;</span>
-              </Link>
-            </div>
-
-            <Availability
-              status={s.availability}
-              label={s.availabilityLabel}
-              className="mt-5 md:mt-6"
-            />
-
-            <div className="mt-12 hidden items-center gap-3 md:flex">
-              <span
-                aria-hidden
-                className="h-15 w-px"
-                style={{ background: "linear-gradient(180deg, var(--color-gold), transparent)" }}
-              />
-              <span className="label text-[11px]">Pastga</span>
-            </div>
+          <div className="mt-7 flex flex-wrap gap-3 md:mt-9 md:gap-4">
+            <Link
+              href="/work"
+              className="inline-flex h-12 items-center rounded-lg bg-gold px-6 text-[15px] font-medium text-void transition-colors hover:bg-gold-300"
+            >
+              Ishlarni ko&apos;rish
+            </Link>
+            <Link
+              href="/about"
+              className="inline-flex h-12 items-center gap-2.5 rounded-lg border border-line-2 px-5 text-[15px] font-medium transition-colors hover:border-line-3 hover:bg-s2"
+            >
+              Men haqimda <span className="text-gold">&rarr;</span>
+            </Link>
           </div>
 
-          <Portrait className="mt-8 h-[430px] md:mt-0 md:h-auto md:w-[44%]" />
+          <Availability
+            status={s.availability}
+            label={s.availabilityLabel}
+            className="mt-5 md:mt-6"
+          />
         </div>
       </section>
 

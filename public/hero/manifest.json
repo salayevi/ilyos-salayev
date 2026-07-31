@@ -1,0 +1,20 @@
+{
+  "total": 134,
+  "first": 1,
+  "pad": 4,
+  "ext": "webp",
+  "tiers": {
+    "hd": {
+      "dir": "/hero/hd",
+      "width": 1280,
+      "height": 720,
+      "bytes": 3628268
+    },
+    "sd": {
+      "dir": "/hero/sd",
+      "width": 720,
+      "height": 405,
+      "bytes": 1469134
+    }
+  }
+}

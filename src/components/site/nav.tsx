@@ -17,10 +17,6 @@ export function SiteNav({ status, label }: { status: string; label: string }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
-  // Route changes must close the sheet, otherwise tapping a link leaves the
-  // overlay covering the page you just navigated to.
-  useEffect(() => setOpen(false), [pathname]);
-
   useEffect(() => {
     if (!open) return;
     const prev = document.body.style.overflow;
@@ -114,6 +110,7 @@ export function SiteNav({ status, label }: { status: string; label: string }) {
                 <li key={l.href}>
                   <Link
                     href={l.href}
+                    onClick={() => setOpen(false)}
                     className="block py-3 text-4xl font-medium tracking-[-0.02em]"
                     aria-current={isOn(l.href) ? "page" : undefined}
                   >
