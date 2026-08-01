@@ -5,8 +5,6 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type MouseEvent } from "react";
 
-import brandMark from "../../../logo ilyos salayev.png";
-
 import { Availability } from "./availability";
 
 const LINKS = [
@@ -104,7 +102,14 @@ export function SiteNav({
             className="absolute left-1/2 z-10 flex -translate-x-1/2 items-center gap-2.5 text-[11px] font-medium tracking-[0.16em] text-tp/90 transition-opacity hover:text-tp md:text-[13px]"
             aria-label="Bosh sahifa"
           >
-            <Image src={brandMark} alt="" className="size-7 rounded-full object-cover md:size-8" priority />
+            <Image
+              src="/brand/logo-ilyos-salayev.webp"
+              alt=""
+              width={64}
+              height={64}
+              priority
+              className="size-7 rounded-full object-cover md:size-8"
+            />
             <span className="hidden sm:inline">ILYOS SALAYEV</span>
           </Link>
 
@@ -167,7 +172,14 @@ export function SiteNav({
         >
           <div className="flex h-14 items-center justify-between px-5">
             <span className="flex items-center gap-2 text-[11px] font-medium tracking-[0.16em]">
-              <Image src={brandMark} alt="" className="size-6 rounded-full object-cover" /> ILYOS SALAYEV
+              <Image
+                src="/brand/logo-ilyos-salayev.webp"
+                alt=""
+                width={48}
+                height={48}
+                className="size-6 rounded-full object-cover"
+              />{" "}
+              ILYOS SALAYEV
             </span>
             <button
               type="button"

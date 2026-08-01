@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { Portrait } from "@/components/site/media-frame";
+import { Photo } from "@/components/site/photo";
 import { Reveal } from "@/components/site/reveal";
 import { getSettings } from "@/lib/queries";
 
@@ -30,9 +30,18 @@ export default async function AboutPage() {
   return (
     <>
       <section className="mx-auto max-w-[1440px] px-5 pt-8 md:flex md:gap-20 md:px-10 md:pt-28 lg:px-20">
-        {/* Cold duotone here, warm on the home hero — the shift from
-            performance to person is carried by the light, not by a caption. */}
-        <Portrait cold className="h-[400px] rounded-[16px] md:h-[560px] md:w-[420px] md:shrink-0" />
+        {/* Cold wash here, warm everywhere else — the shift from performance
+            to person is carried by the light, not by a caption. */}
+        <Photo
+          src="/me/portrait.webp"
+          alt="Ilyos Salayev"
+          width={1400}
+          height={1400}
+          priority
+          wash="cold"
+          sizes="(max-width: 768px) 100vw, 420px"
+          className="h-[400px] rounded-[16px] md:h-[560px] md:w-[420px] md:shrink-0"
+        />
 
         <div className="pt-8 md:pt-10">
           <p className="label text-[10px] md:text-xs">Men haqimda</p>
@@ -103,6 +112,73 @@ export default async function AboutPage() {
             </li>
           ))}
         </ol>
+      </section>
+
+      <section className="mx-auto max-w-[1440px] px-5 pt-14 md:px-10 md:pt-30 lg:px-20">
+        <Reveal>
+          <h2 className="label text-[10px] md:text-xs">Kadrlar</h2>
+        </Reveal>
+
+        {/* Two tall frames beside one wide one: the wide frame is the personal
+            note, so it gets the room the portraits do not need. */}
+        <div className="mt-5 grid gap-3 md:mt-8 md:grid-cols-3 md:gap-5">
+          <Reveal>
+            <Photo
+              src="/me/editorial-1.webp"
+              alt="Ko'chada, tosh devor oldida"
+              width={1400}
+              height={1750}
+              sizes="(max-width: 768px) 100vw, 33vw"
+              className="aspect-4/5 rounded-[16px]"
+            />
+          </Reveal>
+          <Reveal delay={80}>
+            <Photo
+              src="/me/editorial-2.webp"
+              alt="Portret, tabiiy yorug'likda"
+              width={1400}
+              height={2104}
+              sizes="(max-width: 768px) 100vw, 33vw"
+              className="aspect-4/5 rounded-[16px]"
+            />
+          </Reveal>
+          <Reveal delay={160}>
+            <Photo
+              src="/me/editorial-3.webp"
+              alt="Portret, qorong'u fon"
+              width={1400}
+              height={2104}
+              sizes="(max-width: 768px) 100vw, 33vw"
+              className="aspect-4/5 rounded-[16px]"
+            />
+          </Reveal>
+        </div>
+
+        <Reveal className="mt-3 md:mt-5">
+          <div className="grid gap-3 md:grid-cols-5 md:gap-5">
+            <Photo
+              src="/me/guitar-1.webp"
+              alt="Quyosh botishida gitara bilan"
+              width={1400}
+              height={2104}
+              sizes="(max-width: 768px) 100vw, 40vw"
+              className="aspect-4/5 rounded-[16px] md:col-span-2"
+            />
+            <Photo
+              src="/me/guitar-2.webp"
+              alt="Tepalikda, shahar ustida"
+              width={1400}
+              height={933}
+              sizes="(max-width: 768px) 100vw, 60vw"
+              className="aspect-16/10 rounded-[16px] md:col-span-3"
+            />
+          </div>
+        </Reveal>
+
+        <p className="mt-5 max-w-[560px] text-sm leading-[1.7] text-tt md:mt-7 md:text-base">
+          Ish stolidan tashqarida gitara chalaman. Ikkalasida ham bir xil narsa
+          yoqadi: takrorlab mashq qilish va oxirida toza chiqadigan natija.
+        </p>
       </section>
     </>
   );
