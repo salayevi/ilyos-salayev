@@ -1,3 +1,4 @@
+import { OpeningSequence } from "@/components/intro/opening-sequence";
 import { SiteFooter } from "@/components/site/footer";
 import { SiteNav } from "@/components/site/nav";
 import { getSettings } from "@/lib/queries";
@@ -17,6 +18,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
       >
         Asosiy qismga o&apos;tish
       </a>
+      <OpeningSequence />
       <SiteNav status={settings.availability} label={settings.availabilityLabel} />
       <main id="main" className="flex-1">
         {children}
