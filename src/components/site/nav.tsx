@@ -33,14 +33,14 @@ export function SiteNav({ status, label }: { status: string; label: string }) {
 
   return (
     <>
-      <header className="glass sticky top-0 z-40 border-b border-line">
+      <header className="sticky top-0 z-40 bg-[rgb(5_6_7/0.35)] backdrop-blur-md">
         <nav
           aria-label="Asosiy"
           className="mx-auto flex h-14 max-w-[1440px] items-center justify-between px-5 md:h-18 md:px-10 lg:px-20"
         >
           <Link
             href="/"
-            className="text-[13px] font-medium tracking-[0.2em] md:text-[17px]"
+            className="text-[13px] font-medium tracking-[0.2em] text-tp/75 transition-opacity hover:text-tp md:text-[17px]"
             aria-label="Bosh sahifa"
           >
             <span className="md:hidden">IS</span>
@@ -53,7 +53,7 @@ export function SiteNav({ status, label }: { status: string; label: string }) {
                 <Link
                   href={l.href}
                   aria-current={isOn(l.href) ? "page" : undefined}
-                  className={`transition-colors hover:text-tp ${isOn(l.href) ? "text-tp" : "text-ts"}`}
+                  className={`transition-colors hover:text-tp ${isOn(l.href) ? "text-tp/90" : "text-ts/55"}`}
                 >
                   {l.label}
                 </Link>
@@ -62,10 +62,10 @@ export function SiteNav({ status, label }: { status: string; label: string }) {
           </ul>
 
           <div className="hidden items-center gap-5 md:flex">
-            <Availability status={status} label={label} className="h-8 text-xs" />
+            <Availability status={status} label={label} className="h-8 border-transparent bg-transparent text-xs opacity-70" />
             <Link
               href="/contact"
-              className="inline-flex h-9.5 items-center rounded-lg border border-line-2 px-5 text-sm font-medium transition-colors hover:border-line-3 hover:bg-s2"
+              className="inline-flex h-9.5 items-center rounded-lg border border-line-2/60 px-5 text-sm font-medium text-tp/80 transition-colors hover:border-line-3 hover:bg-s2 hover:text-tp"
             >
               Bog&apos;lanish
             </Link>

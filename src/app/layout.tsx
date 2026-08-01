@@ -42,7 +42,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       lang="uz"
       className={`${geist.variable} ${geistMono.variable} ${instrument.variable} h-full antialiased`}
     >
-      <body className="flex min-h-full flex-col">{children}</body>
+      {/*
+        Browser extensions stamp attributes onto <body> before React hydrates —
+        the reported mismatch carried a `bis_register` attribute, which is an
+        extension's doing, not ours. Suppressing here covers only this element's
+        own attributes; children still hydrate strictly.
+      */}
+      <body className="flex min-h-full flex-col" suppressHydrationWarning>
+        {children}
+      </body>
     </html>
   );
 }

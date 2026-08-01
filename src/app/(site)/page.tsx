@@ -1,6 +1,5 @@
 import Link from "next/link";
 
-import { Availability } from "@/components/site/availability";
 import { CinematicHero } from "@/components/hero/cinematic-hero";
 import { ProjectCard } from "@/components/site/project-card";
 import { Reveal } from "@/components/site/reveal";
@@ -27,36 +26,10 @@ export default function HomePage() {
         line1={s.heroLine1}
         line2={s.heroLine2}
         accent={s.heroAccent}
+        subline={s.heroSubline}
+        availability={s.availability}
+        availabilityLabel={s.availabilityLabel}
       />
-
-      {/* ---------------- landing after the sequence ---------------- */}
-      <section className="relative overflow-hidden">
-        <div aria-hidden className="shaft h-[520px] w-[430px] md:h-[760px] md:w-[820px]" />
-        <div className="relative z-10 mx-auto max-w-[1440px] px-5 pt-16 md:px-10 md:pt-24 lg:px-20">
-          <p className="max-w-[620px] text-lg leading-[1.7] text-ts md:text-xl">{s.heroSubline}</p>
-
-          <div className="mt-7 flex flex-wrap gap-3 md:mt-9 md:gap-4">
-            <Link
-              href="/work"
-              className="inline-flex h-12 items-center rounded-lg bg-gold px-6 text-[15px] font-medium text-void transition-colors hover:bg-gold-300"
-            >
-              Ishlarni ko&apos;rish
-            </Link>
-            <Link
-              href="/about"
-              className="inline-flex h-12 items-center gap-2.5 rounded-lg border border-line-2 px-5 text-[15px] font-medium transition-colors hover:border-line-3 hover:bg-s2"
-            >
-              Men haqimda <span className="text-gold">&rarr;</span>
-            </Link>
-          </div>
-
-          <Availability
-            status={s.availability}
-            label={s.availabilityLabel}
-            className="mt-5 md:mt-6"
-          />
-        </div>
-      </section>
 
       {/* ---------------- stack rail ---------------- */}
       <div className="rail relative z-10 overflow-x-auto border-y border-line">
