@@ -1,8 +1,8 @@
-ALTER TABLE "orders" ADD COLUMN "telegram_confirmed_at" timestamp with time zone;
+ALTER TABLE "orders" ADD COLUMN IF NOT EXISTS "telegram_confirmed_at" timestamp with time zone;
 --> statement-breakpoint
-ALTER TABLE "orders" ADD COLUMN "customer_token_hash" text DEFAULT '' NOT NULL;
+ALTER TABLE "orders" ADD COLUMN IF NOT EXISTS "customer_token_hash" text DEFAULT '' NOT NULL;
 --> statement-breakpoint
-CREATE TABLE "visitors" (
+CREATE TABLE IF NOT EXISTS "visitors" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"token" text NOT NULL,
 	"first_seen_at" timestamp with time zone DEFAULT now() NOT NULL,
@@ -15,11 +15,11 @@ CREATE TABLE "visitors" (
 	"city" text DEFAULT '' NOT NULL
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX "visitors_token_idx" ON "visitors" USING btree ("token");
+CREATE UNIQUE INDEX IF NOT EXISTS "visitors_token_idx" ON "visitors" USING btree ("token");
 --> statement-breakpoint
-CREATE INDEX "visitors_last_seen_idx" ON "visitors" USING btree ("last_seen_at");
+CREATE INDEX IF NOT EXISTS "visitors_last_seen_idx" ON "visitors" USING btree ("last_seen_at");
 --> statement-breakpoint
-CREATE TABLE "analytics_events" (
+CREATE TABLE IF NOT EXISTS "analytics_events" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"visitor_id" integer NOT NULL,
 	"type" text NOT NULL,
@@ -28,13 +28,14 @@ CREATE TABLE "analytics_events" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
+ALTER TABLE "analytics_events" DROP CONSTRAINT IF EXISTS "analytics_events_visitor_id_visitors_id_fk";--> statement-breakpoint
 ALTER TABLE "analytics_events" ADD CONSTRAINT "analytics_events_visitor_id_visitors_id_fk" FOREIGN KEY ("visitor_id") REFERENCES "public"."visitors"("id") ON DELETE cascade ON UPDATE no action;
 --> statement-breakpoint
-CREATE INDEX "analytics_events_created_idx" ON "analytics_events" USING btree ("created_at");
+CREATE INDEX IF NOT EXISTS "analytics_events_created_idx" ON "analytics_events" USING btree ("created_at");
 --> statement-breakpoint
-CREATE INDEX "analytics_events_type_idx" ON "analytics_events" USING btree ("type");
+CREATE INDEX IF NOT EXISTS "analytics_events_type_idx" ON "analytics_events" USING btree ("type");
 --> statement-breakpoint
-CREATE TABLE "integration_secrets" (
+CREATE TABLE IF NOT EXISTS "integration_secrets" (
 	"key" text PRIMARY KEY NOT NULL,
 	"encrypted_value" text NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
