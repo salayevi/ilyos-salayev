@@ -178,3 +178,22 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ============================================================
+   Opening film fit
+   The footage is 16:9. On a portrait phone `cover` crops it to a narrow
+   strip and throws away most of the composition, so portrait gets the whole
+   frame instead. It is parked above centre rather than dead-centre: the eye
+   rests in the upper third of a held phone, and a face sitting at the exact
+   middle of a tall screen reads as too low.
+   ============================================================ */
+.intro-film {
+  object-fit: cover;
+  object-position: 50% 50%;
+}
+@media (orientation: portrait) and (max-width: 900px) {
+  .intro-film {
+    object-fit: contain;
+    object-position: 50% 38%;
+  }
+}

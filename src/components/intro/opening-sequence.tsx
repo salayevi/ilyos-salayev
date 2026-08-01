@@ -104,6 +104,38 @@ export function OpeningSequence() {
     setHeroWarm(true);
   }, []);
 
+  /**
+   * Best-effort landscape on phones that allow it.
+   *
+   * Fired *after* playback starts, never before: the orientation and
+   * fullscreen calls are async, and awaiting them first would break the
+   * same-gesture rule that keeps picture and sound locked together. iOS
+   * refuses both outright, which is fine — the portrait fit above already
+   * shows the whole frame.
+   */
+  const tryLandscape = async () => {
+    const root = rootRef.current;
+    const orientation = screen.orientation as ScreenOrientation & {
+      lock?: (o: string) => Promise<void>;
+    };
+    if (!root || typeof orientation?.lock !== "function") return;
+    try {
+      if (!document.fullscreenElement) await root.requestFullscreen?.();
+      await orientation.lock("landscape");
+    } catch {
+      // Unsupported or refused — nothing to recover, the fit handles it.
+    }
+  };
+
+  const releaseLandscape = useCallback(() => {
+    try {
+      (screen.orientation as ScreenOrientation & { unlock?: () => void }).unlock?.();
+      if (document.fullscreenElement) void document.exitFullscreen?.();
+    } catch {
+      // Leaving the intro must never throw.
+    }
+  }, []);
+
   const start = () => {
     const video = videoRef.current;
     const audio = audioRef.current;
@@ -121,13 +153,16 @@ export function OpeningSequence() {
     (window as Window & { __obsidianScrollScore?: HTMLAudioElement }).__obsidianScrollScore = audio;
     void audio.play().catch(() => {});
     void video.play().catch(() => {});
+
+    void tryLandscape();
   };
 
-  const skip = () => {
+  const skip = useCallback(() => {
     videoRef.current?.pause();
     audioRef.current?.pause();
+    releaseLandscape();
     setDismissed(true);
-  };
+  }, [releaseLandscape]);
 
   useEffect(() => {
     if (phase !== "idle") return;
@@ -154,14 +189,15 @@ export function OpeningSequence() {
     };
     root.addEventListener("keydown", onKeyDown);
     return () => root.removeEventListener("keydown", onKeyDown);
-  }, [phase]);
+  }, [phase, skip]);
 
   // Once the curtain is up, hold it for the crossfade then drop the overlay.
   useEffect(() => {
     if (!curtainUp) return;
+    releaseLandscape();
     const t = window.setTimeout(() => setDismissed(true), CURTAIN_MS);
     return () => window.clearTimeout(t);
-  }, [curtainUp]);
+  }, [curtainUp, releaseLandscape]);
 
   const onVideoEnded = () => {
     // Hold the last frame rather than letting the element go blank.
@@ -216,7 +252,7 @@ export function OpeningSequence() {
         >
           <video
             ref={videoRef}
-            className="absolute inset-0 size-full object-cover"
+            className="intro-film absolute inset-0 size-full"
             poster="/intro/poster.webp"
             preload="auto"
             muted
