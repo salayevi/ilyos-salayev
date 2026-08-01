@@ -1,11 +1,13 @@
 import Link from "next/link";
 
 import { CinematicHero } from "@/components/hero/cinematic-hero";
+import { Photo } from "@/components/site/photo";
 import { ProductCard } from "@/components/site/product-card";
 import { ProjectCard } from "@/components/site/project-card";
 import { Reveal } from "@/components/site/reveal";
 import {
   getFeaturedProjects,
+  getPosts,
   getProducts,
   getServices,
   getSettings,
@@ -24,6 +26,7 @@ export default async function HomePage() {
   const featured = await getFeaturedProjects();
   const services = await getServices({ onlyPublished: true });
   const [testimonial] = await getTestimonials();
+  const posts = (await getPosts({ onlyPublished: true })).slice(0, 3);
   // Featured listings first; if none are flagged, still show what is for sale.
   const store = (await getProducts({ onlyPublished: true })).filter((p) => p.status !== "sold");
   const forSale = (store.some((p) => p.featured) ? store.filter((p) => p.featured) : store).slice(
@@ -138,6 +141,40 @@ export default async function HomePage() {
         </section>
       )}
 
+      {/* ---------------- about, in brief ---------------- */}
+      <section className="mx-auto max-w-[1440px] px-5 pt-16 md:px-10 md:pt-35 lg:px-20">
+        <Reveal>
+          <h2 className="label text-[10px] md:text-xs">04 / Men haqimda</h2>
+        </Reveal>
+        <div className="mt-5 md:mt-9 md:flex md:items-center md:gap-14">
+          <Reveal className="md:w-[340px] md:shrink-0">
+            <Photo
+              src="/me/portrait.webp"
+              alt="Ilyos Salayev"
+              width={1400}
+              height={1400}
+              wash="cold"
+              sizes="(max-width: 768px) 100vw, 340px"
+              className="aspect-4/5 rounded-[16px] md:aspect-square"
+            />
+          </Reveal>
+          <Reveal delay={80} className="mt-6 md:mt-0">
+            <p className="font-display text-[28px] leading-[1.24] tracking-[-0.02em] text-balance md:text-[44px] md:leading-[1.18]">
+              {s.aboutTitle}
+            </p>
+            <p className="mt-4 max-w-[520px] text-base leading-[1.72] text-ts md:mt-6 md:text-lg">
+              {s.aboutBody.split("\n\n")[0]}
+            </p>
+            <Link
+              href="/about"
+              className="mt-6 inline-flex items-center gap-2 text-[15px] text-gold transition-colors hover:text-gold-300 md:mt-8"
+            >
+              To&apos;liq hikoya <span aria-hidden>&rarr;</span>
+            </Link>
+          </Reveal>
+        </div>
+      </section>
+
       {/* ---------------- numbers ---------------- */}
       <section className="mt-16 grid grid-cols-2 border-y border-line md:mt-35 md:grid-cols-4">
         {STATS.map((n, i) => (
@@ -168,6 +205,40 @@ export default async function HomePage() {
         </Reveal>
       )}
 
+      {/* ---------------- journal, in brief ---------------- */}
+      {posts.length > 0 && (
+        <section className="mx-auto max-w-[1440px] px-5 pt-16 md:px-10 md:pt-30 lg:px-20">
+          <Reveal>
+            <div className="flex items-baseline justify-between gap-6 border-b border-line pb-5">
+              <h2 className="label text-[10px] md:text-xs">05 / Jurnal</h2>
+              <Link
+                href="/journal"
+                className="text-[13px] text-gold hover:text-gold-300 md:text-[15px]"
+              >
+                Barcha yozuvlar &rarr;
+              </Link>
+            </div>
+          </Reveal>
+          <ul>
+            {posts.map((post, i) => (
+              <Reveal key={post.id} delay={i * 60}>
+                <li className="border-b border-line">
+                  <Link
+                    href={`/journal/${post.slug}`}
+                    className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 py-5 transition-colors hover:bg-s1 md:py-7"
+                  >
+                    <span className="text-lg font-medium md:text-2xl">{post.title}</span>
+                    <span className="font-mono text-xs text-tt">
+                      {post.topic} · {post.readMinutes} daq
+                    </span>
+                  </Link>
+                </li>
+              </Reveal>
+            ))}
+          </ul>
+        </section>
+      )}
+
       {/* ---------------- contact ---------------- */}
       <div aria-hidden className="gold-rule" />
       <section className="relative overflow-hidden px-5 py-16 text-center md:px-10 md:py-37">
@@ -177,7 +248,7 @@ export default async function HomePage() {
           style={{ width: 900, height: 520, left: "50%", top: 0, transform: "translateX(-50%)" }}
         />
         <div className="relative">
-          <p className="label text-[10px] md:text-xs">04 / Bog&apos;lanish</p>
+          <p className="label text-[10px] md:text-xs">06 / Bog&apos;lanish</p>
           <p className="mt-6 font-display text-[44px] leading-none tracking-[-0.03em] text-balance md:mt-7 md:text-8xl">
             Loyihangiz bormi?
           </p>
