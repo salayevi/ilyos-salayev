@@ -136,6 +136,23 @@ Buyurtmaning **nomi va summasi formadan emas, bazadan** olinadi — narx xaridor
 tanlaydigan narsa emas, yashirin maydon esa fakt emas, taklif. Simdan faqat
 qator `id` si o'tadi.
 
+## Portfolio qo'shish va skrinshot
+
+Panelda loyiha yoki tayyor sayt qo'shishning ikki yo'li bor:
+
+- **[A] GitHub** — repo manzilidan nom, tavsif, til va yulduzlar tortiladi.
+- **[B] Deploy link** — jonli sayt manzili beriladi.
+
+Keyin bitta tugma bosilib sayt bosh sahifasining surati olinadi.
+
+Render tashqi xizmatga topshirilgan (kalitsiz mShots, `SCREENSHOT_API_URL`
+bilan almashtiriladi) — headless brauzer ~300 MB bog'liqlik va ikkinchi
+deploy nishonini bitta tugma uchun olib kelardi. Ammo **baytlar o'z
+bazamizga ko'chiriladi** va `/api/shot/:id` dan beriladi: xizmat limit
+qo'ysa, nomini o'zgartirsa yoki yo'qolsa ham portfolio ko'rinaverdi.
+Loyiha qayta suratga olinsa eskisi o'chiriladi, shuning uchun jadval
+har safar bir megabaytga o'smaydi.
+
 ## Ma'lum cheklovlar
 
 - **Sessiya cookie'si `Secure` bayrog'ini `NEXT_PUBLIC_SITE_URL` `https://`
