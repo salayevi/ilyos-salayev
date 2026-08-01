@@ -2,8 +2,8 @@ import Link from "next/link";
 
 import { getServices } from "@/lib/queries";
 
-export default function AdminServices() {
-  const services = getServices();
+export default async function AdminServices() {
+  const services = await getServices();
 
   return (
     <>

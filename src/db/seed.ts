@@ -241,7 +241,7 @@ const POSTS = [
 ];
 
 async function main() {
-  const existing = db.select().from(projects).all();
+  const existing = await db.select().from(projects);
   if (existing.length > 0) {
     console.log("Seed o'tkazib yuborildi — bazada allaqachon ma'lumot bor.");
     console.log("Qayta seed qilish uchun avval data/portfolio.db faylini o'chiring.");
@@ -251,15 +251,15 @@ async function main() {
   const email = process.env.ADMIN_EMAIL ?? "salayevi782@gmail.com";
   const password = process.env.ADMIN_PASSWORD ?? "obsidian-2026";
 
-  db.insert(admins)
+  await db.insert(admins)
     .values({ email, name: "Ilyos Salayev", passwordHash: hashPassword(password) })
-    .run();
+    ;
 
-  db.insert(projects).values(PROJECTS).run();
-  db.insert(services).values(SERVICES).run();
-  db.insert(posts).values(POSTS).run();
+  await db.insert(projects).values(PROJECTS);
+  await db.insert(services).values(SERVICES);
+  await db.insert(posts).values(POSTS);
 
-  db.insert(testimonials)
+  await db.insert(testimonials)
     .values([
       {
         quote: "Ilyos murakkab tizimni oddiy ko'rinadigan qilib yechadi. Kod emas, natija yetkazadi.",
@@ -275,9 +275,9 @@ async function main() {
         position: 2,
       },
     ])
-    .run();
+    ;
 
-  db.insert(messages)
+  await db.insert(messages)
     .values([
       {
         name: "Nodira K.",
@@ -285,7 +285,7 @@ async function main() {
         body: "Salom! Bizda ovozli buyurtma qabul qiluvchi bot kerak. Q3 da boshlash mumkinmi?",
       },
     ])
-    .run();
+    ;
 
   const defaults: Record<string, string> = {
     availability: "open",
@@ -306,9 +306,9 @@ async function main() {
     location: "Toshkent",
   };
 
-  db.insert(settings)
+  await db.insert(settings)
     .values(Object.entries(defaults).map(([key, value]) => ({ key, value })))
-    .run();
+    ;
 
   console.log("Seed tayyor.");
   console.log(`  Admin: ${email}`);

@@ -8,8 +8,8 @@ export const metadata: Metadata = {
   description: "Sun'iy intellekt, mahsulot va tizim muhandisligi bo'yicha tanlangan loyihalar.",
 };
 
-export default function WorkPage() {
-  const projects = getProjects({ onlyPublished: true });
+export default async function WorkPage() {
+  const projects = await getProjects({ onlyPublished: true });
 
   return (
     <section className="mx-auto max-w-[1440px] px-5 pt-9 pb-4 md:px-10 md:pt-28 lg:px-20">

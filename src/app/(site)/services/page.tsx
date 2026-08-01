@@ -16,8 +16,8 @@ const PROCESS = [
   { title: "Topshirish", body: "Hujjat, test va bir oylik qo'llab-quvvatlash." },
 ];
 
-export default function ServicesPage() {
-  const services = getServices({ onlyPublished: true });
+export default async function ServicesPage() {
+  const services = await getServices({ onlyPublished: true });
 
   return (
     <>

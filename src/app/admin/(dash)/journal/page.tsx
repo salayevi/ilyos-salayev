@@ -2,8 +2,8 @@ import Link from "next/link";
 
 import { getPosts } from "@/lib/queries";
 
-export default function AdminJournal() {
-  const posts = getPosts();
+export default async function AdminJournal() {
+  const posts = await getPosts();
 
   return (
     <>

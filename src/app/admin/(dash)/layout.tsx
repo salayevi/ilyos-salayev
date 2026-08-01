@@ -10,7 +10,7 @@ export default async function DashLayout({ children }: { children: React.ReactNo
   const session = await readSession();
   if (!session) redirect("/admin/login");
 
-  const unread = getUnreadCount();
+  const unread = await getUnreadCount();
 
   return (
     <div className="min-h-screen">

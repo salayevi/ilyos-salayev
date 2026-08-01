@@ -4,7 +4,7 @@ Kinematik shaxsiy portfolio va uni to'liq boshqaradigan admin panel.
 Qorong'u rejim, oltin aksent, mobil-birinchi tuzilma.
 
 **Stack:** Next.js 16 (App Router) · React 19 · TypeScript 5 · Tailwind CSS 4 ·
-Drizzle ORM + SQLite · Zod 4 · jose (JWT sessiya)
+Drizzle ORM + PostgreSQL · Zod 4 · jose (JWT sessiya)
 
 ---
 
@@ -13,9 +13,11 @@ Drizzle ORM + SQLite · Zod 4 · jose (JWT sessiya)
 ```bash
 npm install
 cp .env.example .env.local
-# .env.local ichida SESSION_SECRET ni to'ldiring:
-#   openssl rand -base64 32
-npm run db:seed     # jadvallarni yaratadi va boshlang'ich kontentni yozadi
+# .env.local ichida to'ldiring:
+#   SESSION_SECRET  — openssl rand -base64 32
+#   DATABASE_URL    — postgresql://user:parol@localhost:5432/portfolio
+npm run db:migrate  # jadvallarni yaratadi
+npm run db:seed     # boshlang'ich kontentni yozadi
 npm run dev
 ```
 
@@ -34,6 +36,7 @@ parolni albatta almashtiring.**
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run lint` | ESLint |
 | `npm run db:generate` | Sxema o'zgarganda migratsiya yaratadi |
+| `npm run db:migrate` | Migratsiyalarni bazaga qo'llaydi |
 | `npm run db:seed` | Bo'sh bazani to'ldiradi (mavjud ma'lumotga tegmaydi) |
 
 ## Tuzilma
@@ -49,10 +52,9 @@ src/
                      jurnal, xabarlar, sozlamalar
   components/site/   sayt komponentlari
   components/admin/  panel formalari va qobiq
-  db/                Drizzle sxemasi, ulanish, seed
+  db/                Drizzle sxemasi (pg-core), ulanish, seed
   lib/               sessiya, parol, so'rovlar, validatorlar, server aksiyalari
 drizzle/             SQL migratsiyalari
-data/                SQLite fayli (git'ga kirmaydi)
 ```
 
 ## Dizayn tizimi
@@ -79,8 +81,8 @@ darhol ko'rinadi.
 - **Sessiya cookie'si `Secure` bayrog'ini `NEXT_PUBLIC_SITE_URL` `https://`
   bilan boshlansagina qo'yadi.** Domenga chiqarganda uni to'g'ri qiymatga
   o'rnating, aks holda cookie shifrlanmagan ulanishda ham yuboriladi.
-- SQLite bitta fayl — bir vaqtda bitta yozuvchi. Bu hajmdagi sayt uchun
-  yetarli; ko'p instansiyali deploy kerak bo'lsa Postgres'ga o'tish lozim.
+- Vaqt ustunlari `timestamptz`, ya'ni sana formatlash foydalanuvchi
+  brauzerining mintaqasiga tayanadi.
 - Portret rasmlari hozircha CSS bilan chizilgan o'rin egallovchi
   (`components/site/media-frame.tsx`). Haqiqiy suratlar qo'shilganda
   faqat shu komponent o'zgaradi.
@@ -97,6 +99,15 @@ Kodda ataylab qilingan, izohlangan ikki qaror bor:
    qilish butun dinamik daraxtni aksiyaning o'z render bosqichi ichida qayta
    renderga majburlaydi va javob oqimi qulflanadi. O'rniga sahifa darajasidagi
    tor bekor qilish qo'llaniladi.
+
+### PostgreSQL sozlash eslatmasi
+
+Rol `NOLOGIN` bilan yaratilgan bo'lsa ilova ulana olmaydi. Superuser sifatida:
+
+```sql
+ALTER ROLE portfolio_user LOGIN;
+GRANT ALL ON SCHEMA public TO portfolio_user;  -- PG15+ da majburiy
+```
 
 ---
 

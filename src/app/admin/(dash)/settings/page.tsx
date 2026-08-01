@@ -1,8 +1,8 @@
 import { SettingsForm } from "@/components/admin/settings-form";
 import { getSettings } from "@/lib/queries";
 
-export default function AdminSettings() {
-  const settings = getSettings();
+export default async function AdminSettings() {
+  const settings = await getSettings();
 
   return (
     <>

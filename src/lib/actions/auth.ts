@@ -22,7 +22,7 @@ export async function login(_prev: LoginState, formData: FormData): Promise<Logi
   const generic = { error: "Email yoki parol noto'g'ri" };
   if (!parsed.success) return generic;
 
-  const admin = db.select().from(admins).where(eq(admins.email, parsed.data.email)).get();
+  const [admin] = await db.select().from(admins).where(eq(admins.email, parsed.data.email)).limit(1);
   if (!admin || !verifyPassword(parsed.data.password, admin.passwordHash)) return generic;
 
   await createSession({ id: admin.id, email: admin.email, name: admin.name });

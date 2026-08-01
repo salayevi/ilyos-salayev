@@ -2,12 +2,12 @@ import Link from "next/link";
 
 import { getMessages, getPosts, getProjects, getServices, getSettings } from "@/lib/queries";
 
-export default function AdminHome() {
-  const projects = getProjects();
-  const services = getServices();
-  const posts = getPosts();
-  const inbox = getMessages();
-  const s = getSettings();
+export default async function AdminHome() {
+  const projects = await getProjects();
+  const services = await getServices();
+  const posts = await getPosts();
+  const inbox = await getMessages();
+  const s = await getSettings();
 
   const stats = [
     { label: "Loyihalar", value: projects.length, sub: `${projects.filter((p) => p.published).length} nashr`, href: "/admin/projects" },
@@ -61,7 +61,7 @@ export default function AdminHome() {
                     )}
                   </p>
                   <p className="font-mono text-xs text-tt">
-                    {new Date(m.createdAt * 1000).toLocaleDateString("uz-UZ")}
+                    {m.createdAt.toLocaleDateString("uz-UZ")}
                   </p>
                 </div>
                 <p className="mt-1 line-clamp-2 text-sm text-ts">{m.body}</p>

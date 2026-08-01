@@ -10,19 +10,19 @@ type Params = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { slug } = await params;
-  const project = getProjectBySlug(slug);
+  const project = await getProjectBySlug(slug);
   if (!project) return { title: "Topilmadi" };
   return { title: project.title, description: project.summary };
 }
 
 export default async function CaseStudyPage({ params }: Params) {
   const { slug } = await params;
-  const project = getProjectBySlug(slug);
+  const project = await getProjectBySlug(slug);
   if (!project || !project.published) notFound();
 
-  const all = getProjects({ onlyPublished: true });
+  const all = await getProjects({ onlyPublished: true });
   const index = all.findIndex((p) => p.slug === project.slug);
-  const next = getAdjacentProject(project.slug);
+  const next = await getAdjacentProject(project.slug);
 
   const sections = [
     { key: "overview", label: "Umumiy", body: project.overview },

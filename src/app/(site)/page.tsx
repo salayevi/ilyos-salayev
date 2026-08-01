@@ -12,11 +12,11 @@ const STATS = [
   { value: "99.9%", label: "Servis uptime" },
 ];
 
-export default function HomePage() {
-  const s = getSettings();
-  const featured = getFeaturedProjects();
-  const services = getServices({ onlyPublished: true });
-  const [testimonial] = getTestimonials();
+export default async function HomePage() {
+  const s = await getSettings();
+  const featured = await getFeaturedProjects();
+  const services = await getServices({ onlyPublished: true });
+  const [testimonial] = await getTestimonials();
 
   return (
     <>

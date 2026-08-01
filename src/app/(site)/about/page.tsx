@@ -24,8 +24,8 @@ const TIMELINE = [
   { year: "2020", role: "Dasturchi", org: "Freelance", current: false },
 ];
 
-export default function AboutPage() {
-  const s = getSettings();
+export default async function AboutPage() {
+  const s = await getSettings();
 
   return (
     <>

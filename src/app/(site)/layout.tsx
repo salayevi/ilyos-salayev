@@ -7,8 +7,8 @@ import { getSettings } from "@/lib/queries";
 // rather than serving a build-time snapshot.
 export const dynamic = "force-dynamic";
 
-export default function SiteLayout({ children }: { children: React.ReactNode }) {
-  const settings = getSettings();
+export default async function SiteLayout({ children }: { children: React.ReactNode }) {
+  const settings = await getSettings();
 
   return (
     <>

@@ -2,8 +2,8 @@ import Link from "next/link";
 
 import { getProjects } from "@/lib/queries";
 
-export default function AdminProjects() {
-  const projects = getProjects();
+export default async function AdminProjects() {
+  const projects = await getProjects();
 
   return (
     <>

@@ -38,9 +38,9 @@ export async function submitMessage(
     };
   }
 
-  db.insert(messages)
+  await db.insert(messages)
     .values({ name: parsed.data.name, email: parsed.data.email, body: parsed.data.body })
-    .run();
+    ;
 
   return { status: "success" };
 }

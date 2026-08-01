@@ -9,8 +9,8 @@ export const metadata: Metadata = {
   description: "Loyihangiz haqida yozing — bir ish kuni ichida javob beraman.",
 };
 
-export default function ContactPage() {
-  const s = getSettings();
+export default async function ContactPage() {
+  const s = await getSettings();
 
   const rows = [
     { label: "Email", value: s.email, href: `mailto:${s.email}` },

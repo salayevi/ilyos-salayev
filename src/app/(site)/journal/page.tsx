@@ -8,8 +8,8 @@ export const metadata: Metadata = {
   description: "Muhandislik yozuvlari — ovoz, xotira, arxitektura.",
 };
 
-export default function JournalPage() {
-  const posts = getPosts({ onlyPublished: true });
+export default async function JournalPage() {
+  const posts = await getPosts({ onlyPublished: true });
 
   return (
     <section className="mx-auto max-w-[900px] px-5 pt-9 md:px-10 md:pt-28">

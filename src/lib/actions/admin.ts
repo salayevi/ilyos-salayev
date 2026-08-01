@@ -53,7 +53,7 @@ function rowId(formData: FormData): number | null {
  *
  * This deliberately does NOT use `revalidatePath("/", "layout")`. Invalidating
  * the root layout makes Next re-render the whole dynamic tree to build the
- * action's response, and those renders hit better-sqlite3 synchronously from
+ * action's response, and those renders re-query the database from
  * inside the action's own render pass, which deadlocks the response stream:
  * the write lands but the reply never arrives. Narrow page-level invalidation
  * keeps the router honest without that blast radius.
@@ -82,22 +82,22 @@ export async function saveProject(_prev: FormState, formData: FormData): Promise
     ...d,
     stack: JSON.stringify(d.stack),
     metrics: JSON.stringify(d.metrics),
-    updatedAt: Math.floor(Date.now() / 1000),
+    updatedAt: new Date(),
   };
 
-  // Slug is unique; surface the collision instead of letting SQLite throw.
-  const clash = db.select().from(projects).where(eq(projects.slug, d.slug)).get();
+  // Slug is unique; surface the collision instead of letting Postgres throw.
+  const [clash] = await db.select().from(projects).where(eq(projects.slug, d.slug)).limit(1);
   if (clash && clash.id !== id) {
     return { error: "Bu slug band", fieldErrors: { slug: "Bu slug allaqachon ishlatilgan" } };
   }
 
   if (id === null) {
-    const row = db.insert(projects).values(values).returning({ id: projects.id }).get();
+    const [row] = await db.insert(projects).values(values).returning({ id: projects.id });
     refreshPublic();
     redirect(`/admin/projects/${row.id}?saved=1`);
   }
 
-  db.update(projects).set(values).where(eq(projects.id, id)).run();
+  await db.update(projects).set(values).where(eq(projects.id, id));
   refreshPublic(`/work/${d.slug}`);
   return { ok: true };
 }
@@ -106,7 +106,7 @@ export async function deleteProject(formData: FormData) {
   await requireAdmin();
   const id = rowId(formData);
   if (id === null) redirect("/admin/projects");
-  db.delete(projects).where(eq(projects.id, id)).run();
+  await db.delete(projects).where(eq(projects.id, id));
   refreshPublic();
   redirect("/admin/projects");
 }
@@ -127,16 +127,16 @@ export async function saveService(_prev: FormState, formData: FormData): Promise
   const values = {
     ...parsed.data,
     features: JSON.stringify(parsed.data.features),
-    updatedAt: Math.floor(Date.now() / 1000),
+    updatedAt: new Date(),
   };
 
   if (id === null) {
-    db.insert(services).values(values).run();
+    await db.insert(services).values(values);
     refreshPublic();
     redirect("/admin/services");
   }
 
-  db.update(services).set(values).where(eq(services.id, id)).run();
+  await db.update(services).set(values).where(eq(services.id, id));
   refreshPublic();
   return { ok: true };
 }
@@ -145,7 +145,7 @@ export async function deleteService(formData: FormData) {
   await requireAdmin();
   const id = rowId(formData);
   if (id === null) redirect("/admin/services");
-  db.delete(services).where(eq(services.id, id)).run();
+  await db.delete(services).where(eq(services.id, id));
   refreshPublic();
   redirect("/admin/services");
 }
@@ -163,20 +163,20 @@ export async function savePost(_prev: FormState, formData: FormData): Promise<Fo
   if (!parsed.success) return { error: "Formani tekshiring", fieldErrors: collect(parsed.error) };
 
   const d = parsed.data;
-  const clash = db.select().from(posts).where(eq(posts.slug, d.slug)).get();
+  const [clash] = await db.select().from(posts).where(eq(posts.slug, d.slug)).limit(1);
   if (clash && clash.id !== id) {
     return { error: "Bu slug band", fieldErrors: { slug: "Bu slug allaqachon ishlatilgan" } };
   }
 
-  const values = { ...d, updatedAt: Math.floor(Date.now() / 1000) };
+  const values = { ...d, updatedAt: new Date() };
 
   if (id === null) {
-    const row = db.insert(posts).values(values).returning({ id: posts.id }).get();
+    const [row] = await db.insert(posts).values(values).returning({ id: posts.id });
     refreshPublic();
     redirect(`/admin/journal/${row.id}?saved=1`);
   }
 
-  db.update(posts).set(values).where(eq(posts.id, id)).run();
+  await db.update(posts).set(values).where(eq(posts.id, id));
   refreshPublic(`/journal/${d.slug}`);
   return { ok: true };
 }
@@ -185,7 +185,7 @@ export async function deletePost(formData: FormData) {
   await requireAdmin();
   const id = rowId(formData);
   if (id === null) redirect("/admin/journal");
-  db.delete(posts).where(eq(posts.id, id)).run();
+  await db.delete(posts).where(eq(posts.id, id));
   refreshPublic();
   redirect("/admin/journal");
 }
@@ -196,10 +196,9 @@ export async function setMessageRead(formData: FormData) {
   await requireAdmin();
   const id = rowId(formData);
   if (id === null) return;
-  db.update(messages)
+  await db.update(messages)
     .set({ read: formData.get("read") === "1" })
     .where(eq(messages.id, id))
-    .run();
   revalidatePath("/admin/messages", "page");
 }
 
@@ -207,10 +206,9 @@ export async function setMessageArchived(formData: FormData) {
   await requireAdmin();
   const id = rowId(formData);
   if (id === null) return;
-  db.update(messages)
+  await db.update(messages)
     .set({ archived: formData.get("archived") === "1" })
     .where(eq(messages.id, id))
-    .run();
   revalidatePath("/admin/messages", "page");
 }
 
@@ -218,7 +216,7 @@ export async function deleteMessage(formData: FormData) {
   await requireAdmin();
   const id = rowId(formData);
   if (id === null) return;
-  db.delete(messages).where(eq(messages.id, id)).run();
+  await db.delete(messages).where(eq(messages.id, id));
   revalidatePath("/admin/messages", "page");
 }
 
@@ -230,7 +228,7 @@ export async function saveSettings(_prev: FormState, formData: FormData): Promis
   const parsed = settingsSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { error: "Formani tekshiring", fieldErrors: collect(parsed.error) };
 
-  const stamp = Math.floor(Date.now() / 1000);
+  const stamp = new Date();
   const rows = Object.entries(parsed.data).map(([key, raw]) => ({
     key,
     value: String(raw),
@@ -241,13 +239,12 @@ export async function saveSettings(_prev: FormState, formData: FormData): Promis
   // transaction wrapper kills the Server Action's connection mid-response in
   // Next 16.2 (no error is logged, the socket just closes). One statement is
   // atomic in SQLite anyway, so this keeps the all-or-nothing guarantee.
-  db.insert(settings)
+  await db.insert(settings)
     .values(rows)
     .onConflictDoUpdate({
       target: settings.key,
       set: { value: sql`excluded.value`, updatedAt: stamp },
     })
-    .run();
 
   refreshPublic();
   return { ok: true };

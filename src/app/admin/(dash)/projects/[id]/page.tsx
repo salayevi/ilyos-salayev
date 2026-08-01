@@ -6,7 +6,7 @@ import { getProjectById } from "@/lib/queries";
 
 export default async function EditProject({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const project = getProjectById(Number(id));
+  const project = await getProjectById(Number(id));
   if (!project) notFound();
 
   return (

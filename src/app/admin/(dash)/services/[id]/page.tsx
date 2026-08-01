@@ -6,7 +6,7 @@ import { getServiceById } from "@/lib/queries";
 
 export default async function EditService({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const service = getServiceById(Number(id));
+  const service = await getServiceById(Number(id));
   if (!service) notFound();
 
   return (

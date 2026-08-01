@@ -8,7 +8,7 @@ export default async function AdminMessages({
 }) {
   const { arxiv } = await searchParams;
   const archived = arxiv === "1";
-  const inbox = getMessages({ archived });
+  const inbox = await getMessages({ archived });
 
   const pill =
     "inline-flex h-9 items-center rounded-lg border px-3.5 text-[13px] transition-colors";
@@ -56,7 +56,7 @@ export default async function AdminMessages({
                   )}
                 </p>
                 <p className="font-mono text-xs text-tt">
-                  {new Date(m.createdAt * 1000).toLocaleString("uz-UZ")}
+                  {m.createdAt.toLocaleString("uz-UZ")}
                 </p>
               </div>
 
