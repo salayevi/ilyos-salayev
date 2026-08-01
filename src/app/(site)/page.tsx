@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import { CinematicHero } from "@/components/hero/cinematic-hero";
@@ -8,6 +9,7 @@ import { Reveal } from "@/components/site/reveal";
 import {
   getFeaturedProjects,
   getPosts,
+  getProjects,
   getProducts,
   getServices,
   getSettings,
@@ -21,9 +23,24 @@ const STATS = [
   { value: "99.9%", label: "Servis uptime" },
 ];
 
+export async function generateMetadata(): Promise<Metadata> {
+  const s = await getSettings();
+  return {
+    // The hero copy is editable from /admin, so the share card follows it
+    // rather than drifting away from what the page actually says.
+    title: `${s.heroLine1} ${s.heroLine2} ${s.heroAccent}`.trim(),
+    description: s.heroSubline,
+    openGraph: { title: "Ilyos Salayev", description: s.heroSubline },
+  };
+}
+
 export default async function HomePage() {
   const s = await getSettings();
-  const featured = await getFeaturedProjects();
+  // Flagged work first, but a single featured item would leave a two-column
+  // grid half empty — so fall back to published work until there are enough.
+  const flagged = await getFeaturedProjects();
+  const featured =
+    flagged.length >= 2 ? flagged : (await getProjects({ onlyPublished: true })).slice(0, 3);
   const services = await getServices({ onlyPublished: true });
   const [testimonial] = await getTestimonials();
   const posts = (await getPosts({ onlyPublished: true })).slice(0, 3);
