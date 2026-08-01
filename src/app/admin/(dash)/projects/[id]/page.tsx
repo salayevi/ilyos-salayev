@@ -4,6 +4,9 @@ import { notFound } from "next/navigation";
 import { ProjectForm } from "@/components/admin/project-form";
 import { getProjectById } from "@/lib/queries";
 
+// Screenshot capture polls the renderer for up to ~15s; see projects/new.
+export const maxDuration = 60;
+
 export default async function EditProject({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const project = await getProjectById(Number(id));
@@ -13,7 +16,7 @@ export default async function EditProject({ params }: { params: Promise<{ id: st
     <>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Link href="/admin/projects" className="label text-[10px] hover:text-tp">
-          &larr; Loyihalar
+          &larr; Men qilgan va qila oladiganlar
         </Link>
         <Link
           href={`/work/${project.slug}`}

@@ -18,6 +18,24 @@ export const slugSchema = z
   .max(80)
   .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Faqat kichik harf, raqam va tire");
 
+/**
+ * A URL field that is allowed to be empty.
+ *
+ * `z.url().optional()` would still reject `""`, which is what an untouched text
+ * input actually submits — so blank is normalised away before validation runs.
+ */
+const optionalUrl = z
+  .string()
+  .trim()
+  .max(300)
+  .default("")
+  .refine((v) => v === "" || /^https?:\/\/\S+\.\S+/.test(v), "To'liq havola kerak: https://...");
+
+/** Prices are whole currency units; the panel must never store a stray "12.5". */
+const money = z.coerce.number().int().min(0).max(1_000_000).default(0);
+
+const currency = z.enum(["USD", "UZS", "EUR"]).default("USD");
+
 export const projectSchema = z.object({
   slug: slugSchema,
   title: z.string().trim().min(1, "Sarlavha kerak").max(120),
@@ -44,6 +62,12 @@ export const projectSchema = z.object({
         .filter(([value, label]) => value && label)
         .map(([value, label]) => ({ value, label })),
     ),
+  sourceKind: z.enum(["github", "vercel", "manual"]).default("manual"),
+  sourceUrl: optionalUrl,
+  /** The deployed site. Screenshots are taken of this, not of `sourceUrl`. */
+  liveUrl: optionalUrl,
+  /** Written by the capture action; carried through the form as a hidden field. */
+  previewImage: z.string().trim().max(300).default(""),
   featured: z.coerce.boolean().default(false),
   published: z.coerce.boolean().default(true),
   position: z.coerce.number().int().min(0).max(999).default(0),
@@ -54,10 +78,61 @@ export const serviceSchema = z.object({
   duration: z.string().trim().max(60).default(""),
   description: z.string().trim().max(1000).default(""),
   features: lines,
+  price: money,
+  currency,
+  priceFrom: z.coerce.boolean().default(false),
   priceNote: z.string().trim().max(120).default(""),
   highlighted: z.coerce.boolean().default(false),
   published: z.coerce.boolean().default(true),
   position: z.coerce.number().int().min(0).max(999).default(0),
+});
+
+export const productSchema = z.object({
+  slug: slugSchema,
+  title: z.string().trim().min(1, "Nomi kerak").max(120),
+  summary: z.string().trim().max(400).default(""),
+  description: z.string().trim().max(4000).default(""),
+  price: money,
+  currency,
+  priceNote: z.string().trim().max(120).default(""),
+  demoUrl: optionalUrl,
+  sourceKind: z.enum(["github", "vercel", "manual"]).default("manual"),
+  sourceUrl: optionalUrl,
+  previewImage: z.string().trim().max(300).default(""),
+  stack: lines,
+  includes: lines,
+  category: z.enum(["Biznes", "Do'kon", "Landing", "Portfolio", "Panel"]).default("Biznes"),
+  status: z.enum(["available", "reserved", "sold"]).default("available"),
+  featured: z.coerce.boolean().default(false),
+  published: z.coerce.boolean().default(true),
+  position: z.coerce.number().int().min(0).max(999).default(0),
+});
+
+/** A booking or a purchase request placed from the public site. */
+export const orderSchema = z.object({
+  name: z.string().trim().min(2, "Ismingizni yozing").max(80),
+  email: z.email("Email noto'g'ri").max(160),
+  phone: z.string().trim().max(40).default(""),
+  brief: z.string().trim().max(2000).default(""),
+  preferredStart: z.string().trim().max(80).default(""),
+  /** Honeypot — real people never fill a field they cannot see. */
+  website: z.string().max(0).optional().default(""),
+});
+
+export const orderStatusSchema = z.enum([
+  "new",
+  "contacted",
+  "scheduled",
+  "paid",
+  "done",
+  "declined",
+]);
+
+/** Empty integration fields preserve the encrypted value already in the database. */
+export const integrationsSchema = z.object({
+  githubToken: z.string().trim().max(500).default(""),
+  vercelToken: z.string().trim().max(500).default(""),
+  screenshotApiUrl: z.string().trim().max(500).default(""),
 });
 
 export const postSchema = z.object({
@@ -102,8 +177,10 @@ export const settingsSchema = z.object({
 
 export type ProjectInput = z.infer<typeof projectSchema>;
 export type ServiceInput = z.infer<typeof serviceSchema>;
+export type ProductInput = z.infer<typeof productSchema>;
 export type PostInput = z.infer<typeof postSchema>;
 export type SettingsInput = z.infer<typeof settingsSchema>;
+export type OrderStatus = z.infer<typeof orderStatusSchema>;
 
 export type Metric = { value: string; label: string };
 

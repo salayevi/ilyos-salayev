@@ -1,19 +1,63 @@
 import Link from "next/link";
 
-import { getMessages, getPosts, getProjects, getServices, getSettings } from "@/lib/queries";
+import { getAnalyticsOverview } from "@/lib/analytics";
+import { ORDER_STATUS_LABELS, formatMoney } from "@/lib/format";
+import {
+  getMessages,
+  getOrders,
+  getPosts,
+  getProducts,
+  getProjects,
+  getServices,
+  getSettings,
+} from "@/lib/queries";
 
 export default async function AdminHome() {
-  const projects = await getProjects();
-  const services = await getServices();
-  const posts = await getPosts();
-  const inbox = await getMessages();
-  const s = await getSettings();
+  const [projects, products, services, posts, inbox, orders, s, analytics] = await Promise.all([
+    getProjects(),
+    getProducts(),
+    getServices(),
+    getPosts(),
+    getMessages(),
+    getOrders(),
+    getSettings(),
+    getAnalyticsOverview(),
+  ]);
+
+  const openOrders = orders.filter((o) => o.status !== "done" && o.status !== "declined");
+  const forSale = products.filter((p) => p.status === "available" && p.published);
 
   const stats = [
-    { label: "Loyihalar", value: projects.length, sub: `${projects.filter((p) => p.published).length} nashr`, href: "/admin/projects" },
-    { label: "Xizmatlar", value: services.length, sub: `${services.filter((x) => x.published).length} nashr`, href: "/admin/services" },
-    { label: "Jurnal", value: posts.length, sub: `${posts.filter((p) => p.published).length} nashr`, href: "/admin/journal" },
-    { label: "Xabarlar", value: inbox.length, sub: `${inbox.filter((m) => !m.read).length} o'qilmagan`, href: "/admin/messages" },
+    {
+      label: "Men qilganlarim",
+      value: projects.length,
+      sub: `${projects.filter((p) => p.previewImage).length} ta screenshot bilan`,
+      href: "/admin/projects",
+    },
+    {
+      label: "Sotuvdagi saytlar",
+      value: forSale.length,
+      sub: `${products.filter((p) => p.status === "sold").length} ta sotilgan`,
+      href: "/admin/store",
+    },
+    {
+      label: "Buyurtmalar",
+      value: openOrders.length,
+      sub: `${orders.length} ta jami`,
+      href: "/admin/orders",
+    },
+    {
+      label: "Xabarlar",
+      value: inbox.length,
+      sub: `${inbox.filter((m) => !m.read).length} o'qilmagan`,
+      href: "/admin/messages",
+    },
+    {
+      label: "Mehmonlar",
+      value: analytics.uniqueVisitors,
+      sub: "30 kun · rozilik bilan",
+      href: "/admin/analytics",
+    },
   ];
 
   return (
@@ -23,7 +67,7 @@ export default async function AdminHome() {
         <span className="label text-[10px]">{s.availabilityLabel}</span>
       </header>
 
-      <div className="mt-6 grid grid-cols-2 gap-3 md:mt-8 md:grid-cols-4 md:gap-4">
+      <div className="mt-6 grid grid-cols-2 gap-3 md:mt-8 md:grid-cols-5 md:gap-4">
         {stats.map((st) => (
           <Link
             key={st.label}
@@ -36,6 +80,49 @@ export default async function AdminHome() {
           </Link>
         ))}
       </div>
+
+      <section className="mt-8 md:mt-10">
+        <div className="flex items-baseline justify-between gap-3 border-b border-line pb-3">
+          <h2 className="label text-[10px]">Oxirgi buyurtmalar</h2>
+          <Link href="/admin/orders" className="text-[13px] text-gold hover:text-gold-300">
+            Hammasi &rarr;
+          </Link>
+        </div>
+
+        {orders.length === 0 ? (
+          <p className="py-8 text-sm text-tt">
+            Hozircha buyurtma yo&apos;q. Xizmat tariflariga narx qo&apos;ying va tayyor
+            saytlarni sotuvga chiqaring.
+          </p>
+        ) : (
+          <ul>
+            {orders.slice(0, 5).map((o) => (
+              <li
+                key={o.id}
+                className="flex flex-wrap items-baseline justify-between gap-2 border-b border-line py-4"
+              >
+                <div className="min-w-0">
+                  <p className="font-medium">
+                    {o.serviceTitle}
+                    <span className="ml-2 rounded bg-s3 px-1.5 py-0.5 text-[10px] text-tt">
+                      {ORDER_STATUS_LABELS[o.status] ?? o.status}
+                    </span>
+                  </p>
+                  <p className="mt-0.5 truncate text-sm text-tt">
+                    {o.name} · {o.email}
+                  </p>
+                  {o.telegramConfirmedAt && (
+                    <p className="mt-1 text-[11px] text-ok">Telegram tasdiqlandi</p>
+                  )}
+                </div>
+                <p className="font-mono text-sm text-gold">
+                  {formatMoney(o.amount, o.currency) ?? "—"}
+                </p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       <section className="mt-8 md:mt-10">
         <div className="flex items-baseline justify-between gap-3 border-b border-line pb-3">
@@ -76,6 +163,7 @@ export default async function AdminHome() {
         <div className="mt-3 flex flex-wrap gap-3">
           {[
             { href: "/admin/projects/new", label: "Yangi loyiha" },
+            { href: "/admin/store/new", label: "Saytni sotuvga qo'yish" },
             { href: "/admin/journal/new", label: "Yangi yozuv" },
             { href: "/admin/services/new", label: "Yangi xizmat" },
             { href: "/admin/settings", label: "Sozlamalar" },
@@ -89,6 +177,9 @@ export default async function AdminHome() {
             </Link>
           ))}
         </div>
+        <p className="mt-4 text-xs text-tt">
+          {services.length} ta xizmat · {posts.length} ta jurnal yozuvi
+        </p>
       </section>
     </>
   );

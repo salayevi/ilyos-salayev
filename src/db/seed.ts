@@ -1,5 +1,14 @@
 import { db } from "./index";
-import { admins, messages, posts, projects, services, settings, testimonials } from "./schema";
+import {
+  admins,
+  messages,
+  posts,
+  products,
+  projects,
+  services,
+  settings,
+  testimonials,
+} from "./schema";
 import { hashPassword } from "../lib/password";
 
 const PROJECTS = [
@@ -173,6 +182,9 @@ const SERVICES = [
     description:
       "Mavjud tizimni ko'rib chiqaman va nima buzilayotganini yozma hisobotda beraman. Kod yozilmaydi — faqat aniqlik.",
     features: JSON.stringify(["Arxitektura auditi", "Tezlik profili", "Yo'l xaritasi"]),
+    price: 900,
+    currency: "USD",
+    priceFrom: false,
     priceNote: "Belgilangan narx",
     highlighted: false,
     position: 1,
@@ -188,7 +200,10 @@ const SERVICES = [
       "Hujjatlashtirish",
       "Bir oylik qo'llab-quvvatlash",
     ]),
-    priceNote: "Bosqichma-bosqich",
+    price: 4500,
+    currency: "USD",
+    priceFrom: true,
+    priceNote: "Bosqichma-bosqich to'lov",
     highlighted: true,
     position: 2,
   },
@@ -198,8 +213,85 @@ const SERVICES = [
     description:
       "Jamoangiz bilan yonma-yon ishlayman — kod ko'rigi, arxitektura qarorlari, chaqiruv bo'yicha yordam.",
     features: JSON.stringify(["Kod ko'rigi", "Arxitektura qarorlari", "Chaqiruv bo'yicha"]),
-    priceNote: "Oylik to'lov",
+    price: 1200,
+    currency: "USD",
+    priceFrom: true,
+    priceNote: "Oyiga",
     highlighted: false,
+    position: 3,
+  },
+];
+
+/**
+ * Ready-made sites offered for sale. Screenshots are intentionally absent —
+ * they are captured from the panel against the real deployment, so a seeded
+ * placeholder would only be something to delete later.
+ */
+const PRODUCTS = [
+  {
+    slug: "restoran-menyu",
+    title: "Restoran menyusi",
+    summary: "Menyu, bron va yetkazib berish so'rovi — bitta sahifada, telefonga moslangan.",
+    description:
+      "Kafe va restoranlar uchun tayyor sayt. Menyu bo'limlari, narxlar va rasm galereyasi panel orqali tahrirlanadi.\n\nStol bron qilish formasi kelgan so'rovni to'g'ridan-to'g'ri panelga tushiradi — hech qanday uchinchi tomon xizmati kerak emas.",
+    price: 700,
+    currency: "USD",
+    priceNote: "Domen va 1 yil hosting bilan",
+    stack: JSON.stringify(["Next.js", "PostgreSQL", "Tailwind"]),
+    includes: JSON.stringify([
+      "To'liq manba kodi",
+      "Boshqaruv paneli",
+      "Menyu va narxlar tahriri",
+      "Bron so'rovlari",
+      "Domen ulash",
+      "1 oy qo'llab-quvvatlash",
+    ]),
+    category: "Biznes",
+    status: "available",
+    featured: true,
+    position: 1,
+  },
+  {
+    slug: "kichik-dokon",
+    title: "Kichik onlayn do'kon",
+    summary: "Katalog, savat va buyurtma — to'lovsiz, so'rov asosida ishlaydigan variant.",
+    description:
+      "Mahsulot katalogi, turkumlar va qidiruv. Buyurtma savatga yig'iladi va panelga so'rov bo'lib tushadi.\n\nTo'lov tizimini keyin ulash mumkin — kod shunga tayyor qoldirilgan.",
+    price: 1100,
+    currency: "USD",
+    priceNote: "To'lov tizimi ulash — alohida",
+    stack: JSON.stringify(["Next.js", "PostgreSQL", "Drizzle", "Tailwind"]),
+    includes: JSON.stringify([
+      "To'liq manba kodi",
+      "Mahsulot katalogi",
+      "Savat va buyurtmalar",
+      "Boshqaruv paneli",
+      "1 oy qo'llab-quvvatlash",
+    ]),
+    category: "Do'kon",
+    status: "available",
+    featured: true,
+    position: 2,
+  },
+  {
+    slug: "xizmat-landing",
+    title: "Xizmat landingi",
+    summary: "Bitta xizmatni sotadigan qisqa sahifa — tezkor va o'lchanadigan.",
+    description:
+      "Kurs, konsultatsiya yoki bitta xizmatni sotish uchun. Yig'ilgan lidlar panelda ko'rinadi.",
+    price: 400,
+    currency: "USD",
+    priceNote: "Bir haftada topshiriladi",
+    stack: JSON.stringify(["Next.js", "Tailwind"]),
+    includes: JSON.stringify([
+      "To'liq manba kodi",
+      "Lid formasi",
+      "Matnlar tahriri",
+      "Domen ulash",
+    ]),
+    category: "Landing",
+    status: "available",
+    featured: false,
     position: 3,
   },
 ];
@@ -241,26 +333,41 @@ const POSTS = [
 ];
 
 async function main() {
-  const existing = await db.select().from(projects);
-  if (existing.length > 0) {
-    console.log("Seed o'tkazib yuborildi — bazada allaqachon ma'lumot bor.");
-    console.log("Qayta seed qilish uchun avval data/portfolio.db faylini o'chiring.");
-    return;
-  }
-
   const email = process.env.ADMIN_EMAIL ?? "salayevi782@gmail.com";
   const password = process.env.ADMIN_PASSWORD ?? "obsidian-2026";
 
-  await db.insert(admins)
-    .values({ email, name: "Ilyos Salayev", passwordHash: hashPassword(password) })
-    ;
+  // Each table is checked on its own rather than gating everything behind one
+  // "is the database empty" test: a schema that grew a table after the first
+  // seed must still be able to fill it without wiping what is already there.
+  const seeded: string[] = [];
+  const skipped: string[] = [];
 
-  await db.insert(projects).values(PROJECTS);
-  await db.insert(services).values(SERVICES);
-  await db.insert(posts).values(POSTS);
+  const fill = async (name: string, rows: unknown[], insert: () => Promise<unknown>) => {
+    if (rows.length > 0) {
+      skipped.push(name);
+      return;
+    }
+    await insert();
+    seeded.push(name);
+  };
 
-  await db.insert(testimonials)
-    .values([
+  await fill("admins", await db.select().from(admins), () =>
+    db.insert(admins).values({ email, name: "Ilyos Salayev", passwordHash: hashPassword(password) }),
+  );
+
+  await fill("projects", await db.select().from(projects), () =>
+    db.insert(projects).values(PROJECTS),
+  );
+  await fill("services", await db.select().from(services), () =>
+    db.insert(services).values(SERVICES),
+  );
+  await fill("products", await db.select().from(products), () =>
+    db.insert(products).values(PRODUCTS),
+  );
+  await fill("posts", await db.select().from(posts), () => db.insert(posts).values(POSTS));
+
+  await fill("testimonials", await db.select().from(testimonials), () =>
+    db.insert(testimonials).values([
       {
         quote: "Ilyos murakkab tizimni oddiy ko'rinadigan qilib yechadi. Kod emas, natija yetkazadi.",
         author: "Aziz R.",
@@ -274,18 +381,18 @@ async function main() {
         roleLine: "Operatsiyalar rahbari, Agro hamkor",
         position: 2,
       },
-    ])
-    ;
+    ]),
+  );
 
-  await db.insert(messages)
-    .values([
+  await fill("messages", await db.select().from(messages), () =>
+    db.insert(messages).values([
       {
         name: "Nodira K.",
         email: "nodira@example.uz",
         body: "Salom! Bizda ovozli buyurtma qabul qiluvchi bot kerak. Q3 da boshlash mumkinmi?",
       },
-    ])
-    ;
+    ]),
+  );
 
   const defaults: Record<string, string> = {
     availability: "open",
@@ -306,13 +413,19 @@ async function main() {
     location: "Toshkent",
   };
 
-  await db.insert(settings)
-    .values(Object.entries(defaults).map(([key, value]) => ({ key, value })))
-    ;
+  await fill("settings", await db.select().from(settings), () =>
+    db.insert(settings).values(Object.entries(defaults).map(([key, value]) => ({ key, value }))),
+  );
 
   console.log("Seed tayyor.");
-  console.log(`  Admin: ${email}`);
-  console.log(`  Parol: ${password}`);
+  if (seeded.length > 0) console.log(`  To'ldirildi: ${seeded.join(", ")}`);
+  if (skipped.length > 0) {
+    console.log(`  O'tkazib yuborildi (ma'lumot bor): ${skipped.join(", ")}`);
+  }
+  if (seeded.includes("admins")) {
+    console.log(`  Admin: ${email}`);
+    console.log(`  Parol: ${password}`);
+  }
 }
 
 main().catch((err) => {

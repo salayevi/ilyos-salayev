@@ -1,9 +1,16 @@
 import Link from "next/link";
 
 import { CinematicHero } from "@/components/hero/cinematic-hero";
+import { ProductCard } from "@/components/site/product-card";
 import { ProjectCard } from "@/components/site/project-card";
 import { Reveal } from "@/components/site/reveal";
-import { getFeaturedProjects, getServices, getSettings, getTestimonials } from "@/lib/queries";
+import {
+  getFeaturedProjects,
+  getProducts,
+  getServices,
+  getSettings,
+  getTestimonials,
+} from "@/lib/queries";
 
 const STATS = [
   { value: "12+", label: "Yetkazilgan loyiha" },
@@ -17,6 +24,12 @@ export default async function HomePage() {
   const featured = await getFeaturedProjects();
   const services = await getServices({ onlyPublished: true });
   const [testimonial] = await getTestimonials();
+  // Featured listings first; if none are flagged, still show what is for sale.
+  const store = (await getProducts({ onlyPublished: true })).filter((p) => p.status !== "sold");
+  const forSale = (store.some((p) => p.featured) ? store.filter((p) => p.featured) : store).slice(
+    0,
+    3,
+  );
 
   return (
     <>
@@ -46,7 +59,7 @@ export default async function HomePage() {
       <section className="mx-auto max-w-[1440px] px-5 pt-16 md:px-10 md:pt-30 lg:px-20">
         <Reveal>
           <div className="flex items-baseline justify-between gap-6 border-b border-line pb-5">
-            <h2 className="label text-[10px] md:text-xs">01 / Tanlangan ishlar</h2>
+            <h2 className="label text-[10px] md:text-xs">01 / Ishlangan ishlar</h2>
             <Link href="/work" className="text-[13px] text-gold hover:text-gold-300 md:text-[15px]">
               Barchasini ko&apos;rish &rarr;
             </Link>
@@ -73,11 +86,39 @@ export default async function HomePage() {
         )}
       </section>
 
+      {/* ---------------- ready-made websites ---------------- */}
+      {forSale.length > 0 && (
+        <section className="mx-auto max-w-[1440px] px-5 pt-16 md:px-10 md:pt-35 lg:px-20">
+          <Reveal>
+            <div className="flex items-baseline justify-between gap-6 border-b border-line pb-5">
+              <h2 className="label text-[10px] md:text-xs">02 / Tayyor saytlar</h2>
+              <Link
+                href="/tayyor-saytlar"
+                className="text-[13px] text-gold hover:text-gold-300 md:text-[15px]"
+              >
+                Do&apos;konga o&apos;tish &rarr;
+              </Link>
+            </div>
+          </Reveal>
+          <p className="mt-5 max-w-[620px] text-[15px] text-ts md:text-base">
+            Qurib qo&apos;yilgan saytlar — narxi belgilangan, demosi ochiq, bir necha
+            kunda sizniki bo&apos;ladi.
+          </p>
+          <div className="mt-6 grid gap-5 md:mt-9 md:grid-cols-2 md:gap-6 lg:grid-cols-3">
+            {forSale.map((p, i) => (
+              <Reveal key={p.id} delay={i * 80}>
+                <ProductCard product={p} />
+              </Reveal>
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* ---------------- capabilities ---------------- */}
       {services.length > 0 && (
         <section className="mx-auto max-w-[1440px] px-5 pt-16 md:px-10 md:pt-35 lg:px-20">
           <Reveal>
-            <h2 className="label text-[10px] md:text-xs">02 / Imkoniyatlar</h2>
+            <h2 className="label text-[10px] md:text-xs">03 / Imkoniyatlar</h2>
           </Reveal>
           <div className="mt-5 grid gap-4 md:mt-9 md:grid-cols-3 md:gap-6">
             {services.map((c, i) => (
@@ -136,7 +177,7 @@ export default async function HomePage() {
           style={{ width: 900, height: 520, left: "50%", top: 0, transform: "translateX(-50%)" }}
         />
         <div className="relative">
-          <p className="label text-[10px] md:text-xs">03 / Bog&apos;lanish</p>
+          <p className="label text-[10px] md:text-xs">04 / Bog&apos;lanish</p>
           <p className="mt-6 font-display text-[44px] leading-none tracking-[-0.03em] text-balance md:mt-7 md:text-8xl">
             Loyihangiz bormi?
           </p>

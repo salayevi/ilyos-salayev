@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { MediaFrame, toneOf } from "@/components/site/media-frame";
+import { BrowserFrame, hostOf } from "@/components/site/media-frame";
 import { Reveal } from "@/components/site/reveal";
 import { getAdjacentProject, getProjectBySlug, getProjects } from "@/lib/queries";
 
@@ -63,9 +63,49 @@ export default async function CaseStudyPage({ params }: Params) {
           {project.title}
         </h1>
         <p className="mt-4 max-w-[720px] text-base text-ts md:mt-7 md:text-xl">{project.summary}</p>
+
+        {(project.liveUrl || project.sourceUrl) && (
+          <div className="mt-6 flex flex-wrap gap-3 md:mt-8">
+            {project.liveUrl && (
+              <a
+                href={project.liveUrl}
+                target="_blank"
+                rel="noreferrer noopener"
+                className="inline-flex h-11 items-center rounded-lg bg-gold px-5 text-sm font-medium text-void transition-colors hover:bg-gold-300"
+              >
+                Saytga o&apos;tish &rarr;
+              </a>
+            )}
+            {project.sourceUrl && (
+              <a
+                href={project.sourceUrl}
+                target="_blank"
+                rel="noreferrer noopener"
+                className="inline-flex h-11 items-center rounded-lg border border-line-2 px-5 text-sm font-medium transition-colors hover:border-line-3 hover:bg-s2"
+              >
+                {project.sourceKind === "vercel" ? "Vercel" : "Repozitoriy"}
+              </a>
+            )}
+          </div>
+        )}
       </header>
 
-      <MediaFrame tone={toneOf(project.tone)} rounded={false} className="h-[300px] md:h-[700px]" />
+      {/* The capture is the evidence the case study rests on, so it is shown at
+          full width, in a window frame, before a word of the write-up. */}
+      <div className="mx-auto max-w-[1440px] px-5 md:px-10 lg:px-20">
+        <BrowserFrame
+          src={project.previewImage || undefined}
+          url={project.liveUrl || project.sourceUrl}
+          alt={`${project.title} sayti ekrani`}
+          priority
+          sizes="(max-width: 1440px) 100vw, 1440px"
+        />
+        {hostOf(project.liveUrl) && (
+          <p className="mt-3 text-center text-xs text-tt">
+            {hostOf(project.liveUrl)} sahifasidan olingan ekran surati
+          </p>
+        )}
+      </div>
 
       <div className="mx-auto flex max-w-[1440px] gap-20 px-5 pt-12 md:px-10 md:pt-30 lg:px-20">
         {/* Sticky rail is desktop-only; on mobile the headings carry the structure. */}
@@ -142,12 +182,29 @@ export default async function CaseStudyPage({ params }: Params) {
             </Reveal>
           )}
 
-          <Reveal>
-            <div className="mt-8 grid gap-5 md:mt-14 md:grid-cols-2">
-              <MediaFrame tone={toneOf(project.tone)} className="h-[220px] rounded-[12px] md:h-[260px]" />
-              <MediaFrame tone="azure" className="h-[220px] rounded-[12px] md:h-[260px]" />
-            </div>
-          </Reveal>
+          {/* Two decorative gradient panels used to sit here. Beside a real
+              screenshot they read as missing images, so the space now carries
+              the one link a reader actually wants next. */}
+          {project.liveUrl && (
+            <Reveal>
+              <a
+                href={project.liveUrl}
+                target="_blank"
+                rel="noreferrer noopener"
+                className="mt-8 flex items-center justify-between gap-4 rounded-[12px] border border-line bg-s1 p-5 transition-colors hover:border-gold/40 md:mt-14 md:p-6"
+              >
+                <div className="min-w-0">
+                  <p className="label text-[10px]">Jonli sayt</p>
+                  <p className="mt-1.5 truncate text-[17px] font-medium">
+                    {hostOf(project.liveUrl)}
+                  </p>
+                </div>
+                <span aria-hidden className="shrink-0 text-gold">
+                  &rarr;
+                </span>
+              </a>
+            </Reveal>
+          )}
         </div>
       </div>
 

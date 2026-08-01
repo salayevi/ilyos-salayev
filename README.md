@@ -44,16 +44,20 @@ parolni albatta almashtiring.**
 ```
 src/
   app/
-    (site)/          ommaviy sahifalar — bosh, ishlar, keys, men haqimda,
-                     xizmatlar, jurnal, bog'lanish
+    (site)/          ommaviy sahifalar — bosh, ishlangan ishlar, keys,
+                     tayyor saytlar (do'kon), men haqimda, xizmatlar,
+                     jurnal, bog'lanish
+    api/shot/[id]/   bazadagi ekran suratini beradigan route handler
     admin/
       login/         kirish
-      (dash)/        himoyalangan panel: umumiy, loyihalar, xizmatlar,
+      (dash)/        himoyalangan panel: umumiy, «Men qilgan va qila
+                     oladiganlar», tayyor saytlar, buyurtmalar, xizmatlar,
                      jurnal, xabarlar, sozlamalar
   components/site/   sayt komponentlari
   components/admin/  panel formalari va qobiq
   db/                Drizzle sxemasi (pg-core), ulanish, seed
-  lib/               sessiya, parol, so'rovlar, validatorlar, server aksiyalari
+  lib/               sessiya, parol, so'rovlar, validatorlar, server aksiyalari,
+                     manba importi (sources.ts), screenshot (screenshot.ts)
 drizzle/             SQL migratsiyalari
 ```
 
@@ -70,22 +74,83 @@ Shrift juftligi: **Instrument Serif** (display) · **Geist** (interfeys) ·
 ## Kontentni boshqarish
 
 Panelda tahrirlanadi: loyihalar (keys matni, texnologiya, natijalar),
-xizmatlar, jurnal yozuvlari, kiruvchi xabarlar va sayt sozlamalari
-(bosh sahifa matni, bandlik holati, aloqa havolalari).
+sotuvdagi tayyor saytlar, xizmat tariflari va narxlari, buyurtmalar,
+jurnal yozuvlari, kiruvchi xabarlar va sayt sozlamalari.
 
 Barcha sahifalar `force-dynamic` — panelda saqlangan o'zgarish saytda
 darhol ko'rinadi.
+
+---
+
+## Loyihani GitHub yoki Vercel'dan tortib olish
+
+Panelda «Yangi loyiha» → **Manba** bo'limiga repozitoriy havolasini qo'yib
+«Tortib olish» bosiladi. Nom, tavsif, texnologiyalar, yil va jonli sayt manzili
+formaga o'zi to'ladi — keyin tekshirib «Saqlash» bosiladi. Import hech nimani
+o'zi yozmaydi: bu «topilganini ko'r, keyin tasdiqla» oqimi.
+
+| Manba | Tokensiz | Token bilan |
+| --- | --- | --- |
+| GitHub | Ochiq repolar, soatiga 60 so'rov | Yopiq repolar, soatiga 5000 (`GITHUB_TOKEN`) |
+| Vercel | Faqat `*.vercel.app` havolasi | Loyiha nomi bo'yicha, production alias (`VERCEL_TOKEN`) |
+
+Jamoa loyihasi uchun `VERCEL_TEAM_ID` ham kerak.
+
+## Ekran suratlari
+
+«Screenshot ol» tugmasi jonli saytni suratga oladi va **baytlarni bazaga**
+(`assets` jadvali) yozadi; sayt ularni `/api/shot/<id>` orqali beradi.
+
+Render ishi tashqi xizmatga topshirilgan — bitta tugma uchun loyihaga headless
+brauzer (~300 MB) qo'shish va ikkinchi deploy maqsadi ochish oqlanmaydi. Lekin
+**hosting topshirilmagan**: rasm bizning bazamizda turadi, shuning uchun tashqi
+xizmat limit qo'ysa yoki yo'q bo'lsa ham portfolio ishlayveradi.
+
+Standart provayder — WordPress mShots (kalitsiz). U birinchi so'rovda kulrang
+o'rin egallovchi qaytaradi va rasmni bir necha soniyada tayyorlaydi, shuning
+uchun kod uni ~15 soniyagacha qayta so'raydi. Yangi saytda birinchi urinish
+«render bo'lmadi» desa, ikkinchi marta bosish kifoya.
+
+Boshqa provayderga o'tish uchun `.env.local` da:
+
+```bash
+SCREENSHOT_API_URL=https://api.screenshotone.com/take?access_key=KEY&url={url}&viewport_width=1280
+```
+
+`{url}` — percent-encoded manzil, `{url_raw}` — xom manzil.
+
+`assets` qatorlari o'zgarmas: qayta suratga olinganda yangi qator yoziladi va
+eskisi o'chiriladi, shuning uchun `/api/shot/<id>` `immutable` bilan keshlanadi.
+
+## Daromad oqimlari
+
+Ikkita, bitta `orders` jadvalida (`kind` ustuni ajratadi):
+
+1. **Xizmat tariflari** — `/services` sahifasida narx bilan, har bir tarif ostida
+   o'z buyurtma formasi.
+2. **Tayyor saytlar** — `/tayyor-saytlar` do'koni: demo havolasi, ekran surati,
+   narx, «nima kiradi» ro'yxati va sotib olish so'rovi. Holati `available` ·
+   `reserved` · `sold`.
+
+Buyurtmaning **nomi va summasi formadan emas, bazadan** olinadi — narx xaridor
+tanlaydigan narsa emas, yashirin maydon esa fakt emas, taklif. Simdan faqat
+qator `id` si o'tadi.
 
 ## Ma'lum cheklovlar
 
 - **Sessiya cookie'si `Secure` bayrog'ini `NEXT_PUBLIC_SITE_URL` `https://`
   bilan boshlansagina qo'yadi.** Domenga chiqarganda uni to'g'ri qiymatga
   o'rnating, aks holda cookie shifrlanmagan ulanishda ham yuboriladi.
+- **Sotib olish so'rovi — to'lov emas.** Xaridor formani to'ldiradi, siz
+  bog'lanib to'lovni kelishasiz va buyurtmani `paid` deb belgilaysiz. To'lov
+  provayderi ulanmagan.
+- **Screenshot olish tashqi renderer'ga tayanadi.** Ichki tarmoqdagi yoki parol
+  ortidagi saytni suratga ololmaydi — u yerga tashqi xizmatning kirishi yo'q.
 - Vaqt ustunlari `timestamptz`, ya'ni sana formatlash foydalanuvchi
   brauzerining mintaqasiga tayanadi.
-- Portret rasmlari hozircha CSS bilan chizilgan o'rin egallovchi
-  (`components/site/media-frame.tsx`). Haqiqiy suratlar qo'shilganda
-  faqat shu komponent o'zgaradi.
+- Loyiha kartalari endi haqiqiy ekran suratini ko'rsatadi; surat olinmagan
+  bo'lsa `media-frame.tsx` dagi CSS o'rin egallovchiga tushadi. «Men haqimda»
+  sahifasidagi portret hamon o'rin egallovchi (`Portrait`).
 
 ### Next.js 16.2 bilan bog'liq ikki chekinish
 

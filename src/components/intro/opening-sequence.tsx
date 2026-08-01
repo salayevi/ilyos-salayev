@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { framePath, heroManifest } from "@/lib/hero-manifest";
@@ -16,9 +17,21 @@ import { pickTier } from "@/components/hero/frame-sequence";
  * The overlay never reveals a black frame: the hero's own frames are fetched
  * while the film runs, and the curtain only lifts once they are warm. The score
  * outlives the curtain, fading out on its own at the end of the track.
+ *
+ * The curtain is deliberately *not* remembered. It plays on every arrival at
+ * the site, because it is the opening of the piece rather than an onboarding
+ * step to be got through once — and because a returning visitor showing up
+ * mid-scene is the one thing a staged entrance cannot survive. Only the
+ * skip button and `prefers-reduced-motion` bypass it, and neither persists.
+ *
+ * It is scoped to the page the visitor *arrived* on, and only when that page is
+ * the home page. A deep link — a shared case study, a listing someone is about
+ * to buy — is not an entrance, and covering it with a full-screen film would
+ * stand between that visitor and the thing they came for. In-app navigation is
+ * likewise unaffected: this lives in the site layout, which stays mounted
+ * across client-side route changes, and the entry path is captured once.
  */
 
-const SEEN_KEY = "obsidian.intro.seen";
 const FADE_OUT_SECONDS = 3.2;
 const CURTAIN_MS = 1300;
 /** Frames the hero needs before we are willing to hand over. */
@@ -27,6 +40,11 @@ const COARSE_STRIDE = 8;
 type Phase = "idle" | "playing" | "curtain" | "gone";
 
 export function OpeningSequence() {
+  // Captured once, on the first render of the session. `usePathname` keeps
+  // changing as the visitor navigates; where they came *in* does not.
+  const pathname = usePathname();
+  const [enteredAtHome] = useState(() => pathname === "/");
+
   const [stage, setStage] = useState<Exclude<Phase, "gone">>("idle");
   const [heroWarm, setHeroWarm] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -46,27 +64,11 @@ export function OpeningSequence() {
     () => false,
   );
 
-  // Whether the curtain applies at all is external state (a media query plus a
-  // session flag), so it is read rather than mirrored into state from an effect.
-  // Server snapshot is `true` on purpose: the very first paint must already be
-  // the curtain, otherwise the page flashes into view before the film covers
-  // it. React renders the server snapshot through hydration and then swaps in
-  // the client value, so a returning visitor loses the curtain a frame later —
-  // a far better trade than every first-time visitor seeing the site leak
-  // through.
-  const firstVisit = useSyncExternalStore(
-    () => () => {},
-    () => sessionStorage.getItem(SEEN_KEY) === null,
-    () => true,
-  );
   // The curtain lifting is derivable from the two async signals converging,
   // so it is computed rather than pushed into state from an effect.
   const curtainUp = stage === "playing" && filmEnded && heroWarm;
-  const phase: Phase = !firstVisit || reduced || dismissed
-    ? "gone"
-    : curtainUp
-      ? "curtain"
-      : stage;
+  const phase: Phase =
+    !enteredAtHome || reduced || dismissed ? "gone" : curtainUp ? "curtain" : stage;
 
   // Nothing behind the curtain may scroll or take focus.
   useEffect(() => {
@@ -113,21 +115,50 @@ export function OpeningSequence() {
     // Same tick, same gesture — this is what keeps them locked together.
     audio.currentTime = 0;
     video.currentTime = 0;
+    // The hero receives this exact media element after the entrance. It has
+    // already been unlocked by the visitor's click, so scroll can resume it
+    // without inventing a second, unrelated soundtrack.
+    (window as Window & { __obsidianScrollScore?: HTMLAudioElement }).__obsidianScrollScore = audio;
     void audio.play().catch(() => {});
     void video.play().catch(() => {});
   };
 
   const skip = () => {
-    sessionStorage.setItem(SEEN_KEY, "1");
     videoRef.current?.pause();
     audioRef.current?.pause();
     setDismissed(true);
   };
 
+  useEffect(() => {
+    if (phase !== "idle") return;
+    const root = rootRef.current;
+    if (!root) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        skip();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const focusable = [...root.querySelectorAll<HTMLElement>("button:not([disabled])")];
+      const first = focusable[0];
+      const last = focusable.at(-1);
+      if (!first || !last) return;
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    root.addEventListener("keydown", onKeyDown);
+    return () => root.removeEventListener("keydown", onKeyDown);
+  }, [phase]);
+
   // Once the curtain is up, hold it for the crossfade then drop the overlay.
   useEffect(() => {
     if (!curtainUp) return;
-    sessionStorage.setItem(SEEN_KEY, "1");
     const t = window.setTimeout(() => setDismissed(true), CURTAIN_MS);
     return () => window.clearTimeout(t);
   }, [curtainUp]);
@@ -135,6 +166,10 @@ export function OpeningSequence() {
   const onVideoEnded = () => {
     // Hold the last frame rather than letting the element go blank.
     videoRef.current?.pause();
+    // Landing begins silent. The cinematic hero takes the same audio from this
+    // exact timestamp and advances it only while the visitor scrolls.
+    audioRef.current?.pause();
+    window.dispatchEvent(new Event("obsidian:intro-score-ready"));
     setFilmEnded(true);
   };
 

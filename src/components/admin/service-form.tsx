@@ -59,7 +59,38 @@ export function ServiceForm({ service }: { service?: ServiceView }) {
           />
         </Field>
 
-        <div className="mt-5 grid gap-5 md:grid-cols-2">
+        <hr className="my-8 border-line" />
+        <h2 className="label text-[10px]">Narx</h2>
+
+        <div className="mt-5 grid gap-5 md:grid-cols-4">
+          <Field
+            label="Narx"
+            htmlFor="price"
+            hint="0 — «kelishiladi»"
+            error={state.fieldErrors?.price}
+          >
+            <input
+              id="price"
+              name="price"
+              inputMode="numeric"
+              defaultValue={service?.price ?? 0}
+              className={inputCls}
+            />
+          </Field>
+
+          <Field label="Valyuta" htmlFor="currency" error={state.fieldErrors?.currency}>
+            <select
+              id="currency"
+              name="currency"
+              defaultValue={service?.currency ?? "USD"}
+              className={inputCls}
+            >
+              <option value="USD">USD</option>
+              <option value="UZS">UZS</option>
+              <option value="EUR">EUR</option>
+            </select>
+          </Field>
+
           <Field label="Narx izohi" htmlFor="priceNote">
             <input
               id="priceNote"
@@ -69,6 +100,7 @@ export function ServiceForm({ service }: { service?: ServiceView }) {
               className={inputCls}
             />
           </Field>
+
           <Field label="Tartib" htmlFor="position" error={state.fieldErrors?.position}>
             <input
               id="position"
@@ -80,7 +112,12 @@ export function ServiceForm({ service }: { service?: ServiceView }) {
           </Field>
         </div>
 
-        <div className="mt-5 grid gap-3 md:grid-cols-2">
+        <div className="mt-5 grid gap-3 md:grid-cols-3">
+          <Toggle
+            name="priceFrom"
+            label="«dan boshlab» deb ko'rsatilsin"
+            defaultChecked={service?.priceFrom ?? false}
+          />
           <Toggle name="published" label="Saytda ko'rinsin" defaultChecked={service?.published ?? true} />
           <Toggle
             name="highlighted"

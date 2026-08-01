@@ -46,8 +46,8 @@ export function WorkFilter({ projects }: { projects: ProjectView[] }) {
 
       {shown.length > 0 ? (
         <div className="mt-7 grid gap-8 md:mt-11 md:grid-cols-2 md:gap-6 lg:grid-cols-3">
-          {shown.map((p) => (
-            <ProjectTile key={p.id} project={p} />
+          {shown.map((p, i) => (
+            <ProjectTile key={p.id} project={p} priority={i < 3} />
           ))}
         </div>
       ) : (

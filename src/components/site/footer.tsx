@@ -28,17 +28,22 @@ export function SiteFooter({ settings }: { settings: SiteSettings }) {
             <ul className="mt-3 space-y-2 text-ts">
               <li>
                 <Link href="/work" className="hover:text-tp">
-                  Ishlar
+                  Ishlangan ishlar
                 </Link>
               </li>
               <li>
-                <Link href="/about" className="hover:text-tp">
-                  Men haqimda
+                <Link href="/tayyor-saytlar" className="hover:text-tp">
+                  Tayyor saytlar
                 </Link>
               </li>
               <li>
                 <Link href="/services" className="hover:text-tp">
                   Xizmatlar
+                </Link>
+              </li>
+              <li>
+                <Link href="/about" className="hover:text-tp">
+                  Men haqimda
                 </Link>
               </li>
             </ul>

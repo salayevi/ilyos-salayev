@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import type { ProjectView } from "@/lib/queries";
-import { MediaFrame, toneOf } from "./media-frame";
+import { MediaFrame, hostOf, toneOf } from "./media-frame";
 
 /**
  * On hover the media scales inside a fixed frame while the card itself stays
@@ -10,9 +10,11 @@ import { MediaFrame, toneOf } from "./media-frame";
 export function ProjectCard({
   project,
   size = "standard",
+  priority = false,
 }: {
   project: ProjectView;
   size?: "standard" | "feature";
+  priority?: boolean;
 }) {
   const feature = size === "feature";
 
@@ -24,6 +26,10 @@ export function ProjectCard({
       <div className="relative overflow-hidden rounded-[16px] border border-transparent transition-colors duration-500 group-hover:border-gold/40">
         <MediaFrame
           tone={toneOf(project.tone)}
+          src={project.previewImage || undefined}
+          alt={`${project.title} sayti ekrani`}
+          priority={priority}
+          sizes={feature ? "100vw" : "(max-width: 768px) 100vw, 50vw"}
           className={`transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.03] ${
             feature ? "h-[280px] md:h-[560px]" : "h-[250px] md:h-[440px]"
           }`}
@@ -57,13 +63,40 @@ export function ProjectCard({
 }
 
 /** Compact row used on the work index and inside filters. */
-export function ProjectTile({ project }: { project: ProjectView }) {
+export function ProjectTile({
+  project,
+  priority = false,
+}: {
+  project: ProjectView;
+  /** Set on the first row: one of those screenshots is the page's LCP. */
+  priority?: boolean;
+}) {
+  const host = hostOf(project.liveUrl);
+
   return (
     <Link href={`/work/${project.slug}`} className="group block">
-      <div className="overflow-hidden rounded-[16px]">
+      <div className="overflow-hidden rounded-[16px] border border-line transition-colors group-hover:border-line-3">
+        {/* The screenshot is the point of this tile, so it gets a browser bar
+            and no scrim — nothing is overlaid on it that needs legibility. */}
+        <div className="flex h-8 items-center gap-2 border-b border-line bg-s2 px-3">
+          <span aria-hidden className="flex gap-1.5">
+            <i className="block size-2 rounded-full bg-line-3" />
+            <i className="block size-2 rounded-full bg-line-3" />
+            <i className="block size-2 rounded-full bg-line-3" />
+          </span>
+          {host && (
+            <span className="truncate font-mono text-[10px] text-tt">{host}</span>
+          )}
+        </div>
         <MediaFrame
           tone={toneOf(project.tone)}
-          className="h-[250px] transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.03] md:h-[330px]"
+          src={project.previewImage || undefined}
+          alt={`${project.title} sayti ekrani`}
+          rounded={false}
+          scrim={!project.previewImage}
+          priority={priority}
+          sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+          className="h-[220px] transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.03] md:h-[300px]"
         />
       </div>
       <h3 className="mt-4 text-[22px] font-medium transition-colors group-hover:text-gold md:mt-5 md:text-2xl">

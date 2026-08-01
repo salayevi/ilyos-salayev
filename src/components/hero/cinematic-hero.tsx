@@ -14,7 +14,7 @@ import {
   beatShift,
   type BeatContent,
 } from "./hero-beats";
-import { SceneAudio } from "./scene-audio";
+import { SceneAudio, ScrollLinkedScore } from "./scene-audio";
 
 /** Scroll distance given to the sequence. Long enough that a frame lasts ~3vh. */
 const SCRUB_VH = 520;
@@ -27,6 +27,7 @@ export function CinematicHero(content: BeatContent) {
   const sectionRef = useRef<HTMLElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const audioRef = useRef<SceneAudio | null>(null);
+  const introScoreRef = useRef<ScrollLinkedScore | null>(null);
   const beatRefs = useRef<(HTMLDivElement | null)[]>([]);
   const exitRef = useRef<HTMLDivElement>(null);
   const cueRef = useRef<HTMLDivElement>(null);
@@ -128,7 +129,10 @@ export function CinematicHero(content: BeatContent) {
         seq.setPlayhead(frame);
       }
 
-      audioRef.current?.update(p, velocity);
+      introScoreRef.current?.update(p, velocity);
+      // A visitor who skips the entrance can still choose the synthesised
+      // ambient score manually; otherwise the entrance score takes priority.
+      if (!introScoreRef.current) audioRef.current?.update(p, velocity);
 
       // Overlays are written straight to the DOM. Calling setState here would
       // re-render the whole hero sixty times a second and eat the frame budget
@@ -172,6 +176,24 @@ export function CinematicHero(content: BeatContent) {
   }, [reduced]);
 
   useEffect(() => {
+    type ScoreWindow = Window & { __obsidianScrollScore?: HTMLAudioElement };
+    const adopt = () => {
+      const audio = (window as ScoreWindow).__obsidianScrollScore;
+      if (!audio) return;
+      introScoreRef.current?.dispose();
+      introScoreRef.current = new ScrollLinkedScore(audio);
+      setSoundOn(true);
+    };
+    adopt();
+    window.addEventListener("obsidian:intro-score-ready", adopt);
+    return () => {
+      window.removeEventListener("obsidian:intro-score-ready", adopt);
+      introScoreRef.current?.dispose();
+      introScoreRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
     return () => {
       audioRef.current?.dispose();
       audioRef.current = null;
@@ -179,6 +201,16 @@ export function CinematicHero(content: BeatContent) {
   }, []);
 
   const toggleSound = async () => {
+    if (introScoreRef.current) {
+      if (soundOn) {
+        introScoreRef.current.pause();
+        setSoundOn(false);
+      } else {
+        await introScoreRef.current.resume();
+        setSoundOn(true);
+      }
+      return;
+    }
     if (!audioRef.current) audioRef.current = new SceneAudio();
     if (soundOn) {
       await audioRef.current.stop();
@@ -309,7 +341,7 @@ export function CinematicHero(content: BeatContent) {
             aria-pressed={soundOn}
             className="inline-flex h-9 items-center rounded-full border border-line-2 bg-[rgb(5_6_7/0.5)] px-3.5 text-[11px] tracking-[0.08em] text-ts uppercase backdrop-blur transition-colors hover:border-gold hover:text-tp"
           >
-            {soundOn ? "Ovoz yoniq" : "Ovoz"}
+            {soundOn ? "Ovoz · scroll" : "Ovoz"}
           </button>
         </div>
       </div>

@@ -1,14 +1,21 @@
 import { OpeningSequence } from "@/components/intro/opening-sequence";
 import { SiteFooter } from "@/components/site/footer";
 import { SiteNav } from "@/components/site/nav";
+import { VisitorTracker } from "@/components/site/visitor-tracker";
+import { getAnalyticsConsent } from "@/lib/analytics";
 import { getSettings } from "@/lib/queries";
+import { readSession } from "@/lib/session";
 
 // Content is editable from /admin, so pages must read the database per request
 // rather than serving a build-time snapshot.
 export const dynamic = "force-dynamic";
 
 export default async function SiteLayout({ children }: { children: React.ReactNode }) {
-  const settings = await getSettings();
+  const [settings, consent, session] = await Promise.all([
+    getSettings(),
+    getAnalyticsConsent(),
+    readSession(),
+  ]);
 
   return (
     <>
@@ -19,7 +26,12 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
         Asosiy qismga o&apos;tish
       </a>
       <OpeningSequence />
-      <SiteNav status={settings.availability} label={settings.availabilityLabel} />
+      <VisitorTracker consent={consent} />
+      <SiteNav
+        status={settings.availability}
+        label={settings.availabilityLabel}
+        hasAdminAccess={Boolean(session)}
+      />
       <main id="main" className="flex-1">
         {children}
       </main>

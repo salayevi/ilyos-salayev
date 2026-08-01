@@ -111,7 +111,12 @@ export function SettingsForm({ settings: s }: { settings: SiteSettings }) {
         <Field label="Email" htmlFor="email" error={err?.email}>
           <input id="email" name="email" type="email" defaultValue={s.email} className={inputCls} />
         </Field>
-        <Field label="Telegram" htmlFor="telegram" error={err?.telegram}>
+        <Field
+          label="Telegram operator"
+          htmlFor="telegram"
+          hint="@username yoki t.me/username — buyurtma xabari shu profilga ochiladi"
+          error={err?.telegram}
+        >
           <input
             id="telegram"
             name="telegram"

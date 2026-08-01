@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { OrderForm } from "@/components/site/order-form";
 import { Reveal } from "@/components/site/reveal";
+import { formatMoney } from "@/lib/format";
 import { getServices } from "@/lib/queries";
 
 export const metadata: Metadata = {
@@ -30,53 +32,89 @@ export default async function ServicesPage() {
           Uch xil hamkorlik shakli. Har birida natija oldindan kelishiladi.
         </p>
 
-        <div className="mt-8 grid gap-4 md:mt-14 md:grid-cols-3 md:gap-6">
-          {services.map((s, i) => (
-            <Reveal key={s.id} delay={i * 80}>
-              <article
-                className={`flex h-full flex-col rounded-[16px] border bg-s1 p-6 md:p-8 ${
-                  s.highlighted ? "border-gold" : "border-line"
-                }`}
-              >
-                {s.highlighted && (
-                  <p className="label mb-3 text-[10px] text-gold">Ko&apos;p tanlanadi</p>
-                )}
-                <div className="flex items-baseline justify-between gap-3">
-                  <h2 className="text-2xl font-medium">{s.title}</h2>
-                  <span className="shrink-0 font-mono text-xs text-tt">{s.duration}</span>
-                </div>
-                <p className="mt-3 text-[15px] leading-[1.7] text-ts">{s.description}</p>
+        <div className="mt-8 grid items-start gap-4 md:mt-14 md:grid-cols-3 md:gap-6">
+          {services.map((s, i) => {
+            const price = formatMoney(s.price, s.currency);
+            return (
+              <Reveal key={s.id} delay={i * 80}>
+                <article
+                  className={`flex h-full flex-col rounded-[16px] border bg-s1 p-6 md:p-8 ${
+                    s.highlighted ? "border-gold" : "border-line"
+                  }`}
+                >
+                  {s.highlighted && (
+                    <p className="label mb-3 text-[10px] text-gold">Ko&apos;p tanlanadi</p>
+                  )}
+                  <div className="flex items-baseline justify-between gap-3">
+                    <h2 className="text-2xl font-medium">{s.title}</h2>
+                    <span className="shrink-0 font-mono text-xs text-tt">{s.duration}</span>
+                  </div>
 
-                {s.features.length > 0 && (
-                  <ul className="mt-4 flex flex-col gap-2">
-                    {s.features.map((f) => (
-                      <li key={f} className="flex gap-2.5 text-sm text-ts">
-                        <span aria-hidden className="text-gold">
-                          &mdash;
+                  {price && (
+                    <p className="mt-4 font-display text-[38px] leading-none text-gold md:text-5xl">
+                      {price}
+                      {s.priceFrom && (
+                        <span className="ml-2 align-middle font-sans text-xs text-tt">
+                          dan boshlab
                         </span>
-                        {f}
-                      </li>
-                    ))}
-                  </ul>
-                )}
+                      )}
+                    </p>
+                  )}
 
-                <div className="mt-auto pt-6">
-                  {s.priceNote && <p className="label mb-3 text-[10px]">{s.priceNote}</p>}
-                  <Link
-                    href="/contact"
-                    className={`flex h-11 w-full items-center justify-center rounded-lg text-sm font-medium transition-colors ${
-                      s.highlighted
-                        ? "bg-gold text-void hover:bg-gold-300"
-                        : "border border-line-2 hover:border-line-3 hover:bg-s2"
-                    }`}
-                  >
-                    So&apos;rov yuborish
-                  </Link>
-                </div>
-              </article>
-            </Reveal>
-          ))}
+                  <p className="mt-3 text-[15px] leading-[1.7] text-ts">{s.description}</p>
+
+                  {s.features.length > 0 && (
+                    <ul className="mt-4 flex flex-col gap-2">
+                      {s.features.map((f) => (
+                        <li key={f} className="flex gap-2.5 text-sm text-ts">
+                          <span aria-hidden className="text-gold">
+                            &mdash;
+                          </span>
+                          {f}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
+                  <div className="mt-auto pt-6">
+                    {s.priceNote && <p className="label mb-3 text-[10px]">{s.priceNote}</p>}
+                    {/* A native disclosure rather than a link to the contact
+                        page: the order arrives already attached to this tariff,
+                        so nobody has to describe which one they meant. */}
+                    <details className="group/order">
+                      <summary
+                        className={`flex h-11 w-full cursor-pointer list-none items-center justify-center rounded-lg text-sm font-medium transition-colors ${
+                          s.highlighted
+                            ? "bg-gold text-void hover:bg-gold-300"
+                            : "border border-line-2 hover:border-line-3 hover:bg-s2"
+                        }`}
+                      >
+                        <span className="group-open/order:hidden">Buyurtma berish</span>
+                        <span className="hidden group-open/order:inline">Yopish</span>
+                      </summary>
+                      <div className="mt-4">
+                        <OrderForm
+                          kind="service"
+                          itemId={s.id}
+                          itemTitle={s.title}
+                          priceLine={price ?? s.priceNote ?? null}
+                          submitLabel="So'rovni yuborish"
+                        />
+                      </div>
+                    </details>
+                  </div>
+                </article>
+              </Reveal>
+            );
+          })}
         </div>
+
+        <p className="mt-8 text-[15px] text-ts md:mt-12">
+          Yangi loyihaga vaqtingiz yo&apos;qmi?{" "}
+          <Link href="/tayyor-saytlar" className="text-gold hover:text-gold-300">
+            Tayyor saytlarni ko&apos;ring &rarr;
+          </Link>
+        </p>
       </section>
 
       <section className="mx-auto max-w-[1440px] px-5 pt-14 md:px-10 md:pt-30 lg:px-20">

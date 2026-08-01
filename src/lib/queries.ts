@@ -3,7 +3,16 @@ import "server-only";
 import { and, asc, count, desc, eq } from "drizzle-orm";
 
 import { db } from "@/db";
-import { messages, orders, posts, projects, services, settings, testimonials } from "@/db/schema";
+import {
+  messages,
+  orders,
+  posts,
+  products,
+  projects,
+  services,
+  settings,
+  testimonials,
+} from "@/db/schema";
 import { type Metric, parseJson } from "./validators";
 
 export type ProjectView = Omit<typeof projects.$inferSelect, "stack" | "metrics"> & {
@@ -72,6 +81,38 @@ export async function getServices(opts: { onlyPublished?: boolean } = {}): Promi
 export async function getServiceById(id: number): Promise<ServiceView | null> {
   const [row] = await db.select().from(services).where(eq(services.id, id)).limit(1);
   return row ? toServiceView(row) : null;
+}
+
+export type ProductView = Omit<typeof products.$inferSelect, "stack" | "includes"> & {
+  stack: string[];
+  includes: string[];
+};
+
+function toProductView(row: typeof products.$inferSelect): ProductView {
+  return {
+    ...row,
+    stack: parseJson<string[]>(row.stack, []),
+    includes: parseJson<string[]>(row.includes, []),
+  };
+}
+
+export async function getProducts(opts: { onlyPublished?: boolean } = {}): Promise<ProductView[]> {
+  const base = db.select().from(products).$dynamic();
+  const rows = await (opts.onlyPublished ? base.where(eq(products.published, true)) : base).orderBy(
+    asc(products.position),
+    desc(products.createdAt),
+  );
+  return rows.map(toProductView);
+}
+
+export async function getProductBySlug(slug: string): Promise<ProductView | null> {
+  const [row] = await db.select().from(products).where(eq(products.slug, slug)).limit(1);
+  return row ? toProductView(row) : null;
+}
+
+export async function getProductById(id: number): Promise<ProductView | null> {
+  const [row] = await db.select().from(products).where(eq(products.id, id)).limit(1);
+  return row ? toProductView(row) : null;
 }
 
 export async function getPosts(opts: { onlyPublished?: boolean } = {}) {

@@ -160,3 +160,57 @@ export class SceneAudio {
     this.started = false;
   }
 }
+
+/**
+ * Continues the exact score unlocked by the entrance scene. The file only
+ * advances while the visitor advances the hero, so landing on the page is
+ * quiet and stopping the scroll holds the musical position too.
+ */
+export class ScrollLinkedScore {
+  private enabled = true;
+  private playing = false;
+
+  constructor(private readonly audio: HTMLAudioElement) {
+    this.audio.pause();
+    this.audio.volume = 0.42;
+  }
+
+  get isRunning() {
+    return this.enabled;
+  }
+
+  async resume() {
+    this.enabled = true;
+  }
+
+  pause() {
+    this.enabled = false;
+    this.playing = false;
+    this.audio.pause();
+  }
+
+  update(progress: number, velocity: number) {
+    if (!this.enabled || progress < 0.012 || velocity < 0.0015 || this.audio.ended) {
+      if (this.playing) {
+        this.audio.pause();
+        this.playing = false;
+      }
+      return;
+    }
+
+    // The track retains its current position; velocity only controls how much
+    // life it has. A slow wheel turn is a slow breath, a fast swipe has lift.
+    this.audio.playbackRate = Math.min(1.32, Math.max(0.72, 0.72 + velocity * 0.9));
+    this.audio.volume = Math.min(0.48, 0.22 + velocity * 0.26);
+    if (!this.playing) {
+      this.playing = true;
+      void this.audio.play().catch(() => {
+        this.playing = false;
+      });
+    }
+  }
+
+  dispose() {
+    this.audio.pause();
+  }
+}

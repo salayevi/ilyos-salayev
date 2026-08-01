@@ -2,8 +2,16 @@
 
 import { useActionState } from "react";
 
-import { deleteProject, saveProject, type FormState } from "@/lib/actions/admin";
+import {
+  captureShot,
+  deleteProject,
+  importSource,
+  saveProject,
+  type FormState,
+  type SourceState,
+} from "@/lib/actions/admin";
 import type { ProjectView } from "@/lib/queries";
+import { SourcePanel } from "./source-panel";
 import { DangerButton, Field, SaveBar, Toggle, areaCls, inputCls } from "./ui";
 
 const SECTIONS = [
@@ -14,16 +22,55 @@ const SECTIONS = [
   ["process", "Jarayon"],
 ] as const;
 
+const EMPTY_SOURCE: SourceState = {};
+
 export function ProjectForm({ project }: { project?: ProjectView }) {
   const [state, action] = useActionState<FormState, FormData>(saveProject, {});
+  const [importState, runImport] = useActionState<SourceState, FormData>(
+    importSource,
+    EMPTY_SOURCE,
+  );
+  const [shotState, runCapture] = useActionState<SourceState, FormData>(
+    captureShot,
+    EMPTY_SOURCE,
+  );
+
+  // A successful import refills the fields it owns. Remounting them by key is
+  // what lets an uncontrolled input pick up a new default; fields the importer
+  // knows nothing about — the case-study body — keep whatever was typed.
+  const imported = importState.data;
+  const stamp = importState.nonce ?? 0;
 
   return (
     <>
-      <form action={action}>
+      <SourcePanel
+        table="projects"
+        rowId={project?.id}
+        liveFieldName="liveUrl"
+        liveFieldLabel="Jonli sayt manzili"
+        initial={{
+          sourceKind: project?.sourceKind ?? "manual",
+          sourceUrl: project?.sourceUrl ?? "",
+          liveUrl: project?.liveUrl ?? "",
+          previewImage: project?.previewImage ?? "",
+        }}
+        importState={importState}
+        runImport={runImport}
+        shotState={shotState}
+        runCapture={runCapture}
+      />
+
+      <form id="entity-form" action={action} className="mt-8">
         <input type="hidden" name="id" value={project?.id ?? ""} />
         <div className="grid gap-5 md:grid-cols-2">
           <Field label="Sarlavha" htmlFor="title" error={state.fieldErrors?.title}>
-            <input id="title" name="title" defaultValue={project?.title} className={inputCls} />
+            <input
+              key={`title-${stamp}`}
+              id="title"
+              name="title"
+              defaultValue={imported?.title ?? project?.title}
+              className={inputCls}
+            />
           </Field>
 
           <Field
@@ -32,7 +79,13 @@ export function ProjectForm({ project }: { project?: ProjectView }) {
             hint="URL manzili: /work/slug"
             error={state.fieldErrors?.slug}
           >
-            <input id="slug" name="slug" defaultValue={project?.slug} className={inputCls} />
+            <input
+              key={`slug-${stamp}`}
+              id="slug"
+              name="slug"
+              defaultValue={imported?.slug ?? project?.slug}
+              className={inputCls}
+            />
           </Field>
         </div>
 
@@ -43,10 +96,11 @@ export function ProjectForm({ project }: { project?: ProjectView }) {
           error={state.fieldErrors?.summary}
         >
           <textarea
+            key={`summary-${stamp}`}
             id="summary"
             name="summary"
             rows={2}
-            defaultValue={project?.summary}
+            defaultValue={imported?.summary || project?.summary}
             className={areaCls}
           />
         </Field>
@@ -67,10 +121,11 @@ export function ProjectForm({ project }: { project?: ProjectView }) {
 
           <Field label="Yil" htmlFor="year" error={state.fieldErrors?.year}>
             <input
+              key={`year-${stamp}`}
               id="year"
               name="year"
               inputMode="numeric"
-              defaultValue={project?.year ?? String(new Date().getFullYear())}
+              defaultValue={imported?.year ?? project?.year ?? String(new Date().getFullYear())}
               className={inputCls}
             />
           </Field>
@@ -125,10 +180,11 @@ export function ProjectForm({ project }: { project?: ProjectView }) {
         <div className="grid gap-5 md:grid-cols-2">
           <Field label="Texnologiyalar" htmlFor="stack" hint="Har bir qatorda bittadan">
             <textarea
+              key={`stack-${stamp}`}
               id="stack"
               name="stack"
               rows={5}
-              defaultValue={project?.stack.join("\n")}
+              defaultValue={(imported?.stack ?? project?.stack ?? []).join("\n")}
               placeholder={"Python\nRust\nPostgreSQL"}
               className={areaCls}
             />

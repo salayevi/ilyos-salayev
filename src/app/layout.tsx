@@ -40,6 +40,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html
       lang="uz"
+      // Declares the smooth scrolling set in globals.css so Next can suppress it
+      // during route transitions — without it every navigation animates the
+      // scroll reset, and the dev server logs a warning on each render.
+      data-scroll-behavior="smooth"
       className={`${geist.variable} ${geistMono.variable} ${instrument.variable} h-full antialiased`}
     >
       {/*
