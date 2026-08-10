@@ -140,7 +140,13 @@
 }
 
 /* Reveal-on-scroll. Content resolves from the atmosphere rather than simply
-   sliding up from below; it feels closer to a camera finding focus. */
+   sliding up from below; it feels closer to a camera finding focus.
+
+   This is the *starting* state and the no-JavaScript state only. When the
+   timeline is running, `components/site/reveal.tsx` drives these same four
+   properties a frame at a time off scroll position, so the settle scrubs both
+   ways instead of firing once. The transitions below stay for the fallback
+   path, where `.in` is simply added. */
 .reveal {
   opacity: 0;
   clip-path: inset(8% 0 0 round 16px);
@@ -157,6 +163,31 @@
   clip-path: inset(0 round 16px);
   filter: blur(0);
   transform: scale(1);
+}
+
+/* Navigation: a rule drawn under the destination, from the side the eye
+   arrives on. One property, composited, no layout — the smallest gesture that
+   still reads as an answer to the pointer. */
+.nav-link {
+  position: relative;
+}
+.nav-link::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  bottom: -6px;
+  height: 1px;
+  background: var(--color-gold);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.45s var(--ease-cinematic);
+}
+.nav-link:hover::after,
+.nav-link[aria-current="page"]::after {
+  transform: scaleX(1);
+}
+.nav-link[aria-current="page"]::after {
+  background: var(--color-line-3);
 }
 
 @media (prefers-reduced-motion: reduce) {

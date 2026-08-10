@@ -3,8 +3,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState, type MouseEvent } from "react";
+import { useEffect, useRef, useState, type MouseEvent } from "react";
 
+import { useCinemaFrame } from "@/components/cinema/use-cinema";
 import { Availability } from "./availability";
 
 const LINKS = [
@@ -55,25 +56,21 @@ export function SiteNav({
     };
   }, [open]);
 
-  useEffect(() => {
-    let last = window.scrollY;
-    let raf = 0;
-    const onScroll = () => {
-      if (raf) return;
-      raf = window.requestAnimationFrame(() => {
-        const y = window.scrollY;
-        if (y < 28) setHidden(false);
-        else if (Math.abs(y - last) > 10) setHidden(y > last);
-        last = y;
-        raf = 0;
-      });
-    };
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => {
-      window.removeEventListener("scroll", onScroll);
-      if (raf) window.cancelAnimationFrame(raf);
-    };
-  }, []);
+  /*
+    The bar rides the shared loop rather than a scroll listener of its own.
+    One less `requestAnimationFrame` on the page, and — more to the point — it
+    now reads the same scroll position as everything else on the same frame,
+    so it cannot lag the scene by a tick.
+  */
+  const lastY = useRef(0);
+  useCinemaFrame((frame) => {
+    const y = frame.scrollY;
+    const next = y < 28 ? false : Math.abs(y - lastY.current) > 10 ? y > lastY.current : hidden;
+    lastY.current = y;
+    // React state, but only on an actual change — a handful of times a page,
+    // never per frame.
+    if (next !== hidden) setHidden(next);
+  });
 
   const isOn = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
   const enter = (href: string, text: string) => (event: MouseEvent<HTMLAnchorElement>) => {
@@ -99,7 +96,7 @@ export function SiteNav({
           <Link
             href="/"
             onClick={enter("/", "Bosh sahifa ochilmoqda")}
-            className="absolute left-1/2 z-10 flex -translate-x-1/2 items-center gap-2.5 text-[11px] font-medium tracking-[0.16em] text-tp/90 transition-opacity hover:text-tp md:text-[13px]"
+            className="group absolute left-1/2 z-10 flex -translate-x-1/2 items-center gap-2.5 text-[11px] font-medium tracking-[0.16em] text-tp/90 transition-opacity hover:text-tp md:text-[13px]"
             aria-label="Bosh sahifa"
           >
             <Image
@@ -108,7 +105,9 @@ export function SiteNav({
               width={64}
               height={64}
               priority
-              className="size-7 rounded-full object-cover md:size-8"
+              // The mark leans in a little under the pointer. Transform only,
+              // so it costs a composite and nothing else.
+              className="size-7 rounded-full object-cover transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.08] md:size-8"
             />
             <span className="hidden sm:inline">ILYOS SALAYEV</span>
           </Link>
@@ -122,7 +121,7 @@ export function SiteNav({
                   href={l.href}
                   onClick={enter(l.href, l.label)}
                   aria-current={isOn(l.href) ? "page" : undefined}
-                  className={`transition-colors hover:text-tp ${isOn(l.href) ? "text-tp/90" : "text-ts/55"}`}
+                  className={`nav-link transition-colors hover:text-tp ${isOn(l.href) ? "text-tp/90" : "text-ts/55"}`}
                 >
                   {l.label}
                 </Link>

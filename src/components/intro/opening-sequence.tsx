@@ -1,22 +1,33 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
+import { useCinema } from "@/components/cinema/use-cinema";
+import { useReducedMotion } from "@/components/cinema/use-reduced-motion";
 import { framePath, heroManifest } from "@/lib/hero-manifest";
 import { pickTier } from "@/components/hero/frame-sequence";
 
 /**
- * Opening sequence: the site's front door.
+ * Act I — the invocation.
  *
- * The film and the score have to begin on the *same* user gesture — browsers
- * only unlock media playback inside the click handler, and starting them in
- * separate ticks is exactly how you get audio a beat behind picture. So both
- * `play()` calls are issued synchronously from the button press.
+ * This is no longer a separate system with an ending. It is the first stretch
+ * of the master timeline, and the playhead it advances is the same one the
+ * hero and the score read. The film's own `currentTime` drives it, because the
+ * footage has an edit of its own and scrubbing an mp4 is unreliable on iOS;
+ * everything after is driven by scroll. Both move the *same* playhead, so the
+ * changeover is a change of input rather than a handover between systems —
+ * which is why the score does not restart and the world does not begin again
+ * at zero.
  *
- * The overlay never reveals a black frame: the hero's own frames are fetched
- * while the film runs, and the curtain only lifts once they are warm. The score
- * outlives the curtain, fading out on its own at the end of the track.
+ * The film and the score still have to begin on the *same* user gesture:
+ * browsers only unlock media playback inside the click handler, and starting
+ * them in separate ticks is exactly how you get audio a beat behind picture.
+ * So the conductor is built, and both `play()` calls issued, synchronously
+ * from the button press.
+ *
+ * The curtain never reveals a black frame: the hero's own frames are fetched
+ * while the film runs, and it only lifts once they are warm.
  *
  * The curtain is deliberately *not* remembered. It plays on every arrival at
  * the site, because it is the opening of the piece rather than an onboarding
@@ -32,7 +43,6 @@ import { pickTier } from "@/components/hero/frame-sequence";
  * across client-side route changes, and the entry path is captured once.
  */
 
-const FADE_OUT_SECONDS = 3.2;
 const CURTAIN_MS = 1300;
 /** Frames the hero needs before we are willing to hand over. */
 const COARSE_STRIDE = 8;
@@ -40,6 +50,8 @@ const COARSE_STRIDE = 8;
 type Phase = "idle" | "playing" | "curtain" | "gone";
 
 export function OpeningSequence() {
+  const cinema = useCinema();
+
   // Captured once, on the first render of the session. `usePathname` keeps
   // changing as the visitor navigates; where they came *in* does not.
   const pathname = usePathname();
@@ -53,16 +65,7 @@ export function OpeningSequence() {
   const [filmEnded, setFilmEnded] = useState(false);
   const [dismissed, setDismissed] = useState(false);
 
-  const subscribe = useCallback((cb: () => void) => {
-    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    mq.addEventListener("change", cb);
-    return () => mq.removeEventListener("change", cb);
-  }, []);
-  const reduced = useSyncExternalStore(
-    subscribe,
-    () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
-    () => false,
-  );
+  const reduced = useReducedMotion();
 
   // The curtain lifting is derivable from the two async signals converging,
   // so it is computed rather than pushed into state from an effect.
@@ -70,16 +73,26 @@ export function OpeningSequence() {
   const phase: Phase =
     !enteredAtHome || reduced || dismissed ? "gone" : curtainUp ? "curtain" : stage;
 
+  // Before the visitor commits, the playhead belongs to nobody and is parked
+  // at zero. Without this the timeline would read scroll position 0 as the
+  // start of Act II and the world would already be through the door.
+  //
+  // Strictly `idle`, never `playing`: from the gesture onwards the film owns
+  // the playhead, and re-parking it as the phase changes would take that back.
+  const showing = phase === "idle" || phase === "playing";
+  useEffect(() => {
+    if (!cinema) return;
+    if (phase === "idle") cinema.hold();
+    else if (phase === "gone") cinema.skipToScrub();
+  }, [cinema, phase]);
+
   // Nothing behind the curtain may scroll or take focus.
   useEffect(() => {
-    if (phase !== "idle" && phase !== "playing") return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    if (!showing || !cinema) return;
     window.scrollTo(0, 0);
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, [phase]);
+    cinema.lockScroll(true);
+    return () => cinema.lockScroll(false);
+  }, [showing, cinema]);
 
   /** Warms the frames the hero will ask for first, so the handover is seamless. */
   const warmHero = useCallback(async () => {
@@ -139,19 +152,18 @@ export function OpeningSequence() {
   const start = () => {
     const video = videoRef.current;
     const audio = audioRef.current;
-    if (!video || !audio) return;
+    if (!video || !audio || !cinema) return;
 
     setStage("playing");
     void warmHero();
 
-    // Same tick, same gesture — this is what keeps them locked together.
+    // Same tick, same gesture — browsers only unlock media inside the click
+    // handler, and starting them in separate ticks is how you get audio a beat
+    // behind picture.
     audio.currentTime = 0;
     video.currentTime = 0;
-    // The hero receives this exact media element after the entrance. It has
-    // already been unlocked by the visitor's click, so scroll can resume it
-    // without inventing a second, unrelated soundtrack.
-    (window as Window & { __obsidianScrollScore?: HTMLAudioElement }).__obsidianScrollScore = audio;
     void audio.play().catch(() => {});
+    cinema.startFilm(video);
     void video.play().catch(() => {});
 
     void tryLandscape();
@@ -191,40 +203,30 @@ export function OpeningSequence() {
     return () => root.removeEventListener("keydown", onKeyDown);
   }, [phase, skip]);
 
-  // Once the curtain is up, hold it for the crossfade then drop the overlay.
+  /*
+    The threshold is crossed here.
+
+    `enterScrub` fires as the curtain *starts* to lift, not after: the camera
+    push into the hero, the doorway bloom burning off, the ember field coming
+    up and the score crossfading from transport to scrub all run underneath the
+    fading film. That overlap is the difference between a cut and a move.
+  */
   useEffect(() => {
-    if (!curtainUp) return;
+    if (!curtainUp || !cinema) return;
     releaseLandscape();
+    cinema.enterScrub();
     const t = window.setTimeout(() => setDismissed(true), CURTAIN_MS);
     return () => window.clearTimeout(t);
-  }, [curtainUp, releaseLandscape]);
+  }, [curtainUp, cinema, releaseLandscape]);
 
   const onVideoEnded = () => {
-    // Hold the last frame rather than letting the element go blank.
+    // Hold the last frame rather than letting the element go blank. The intro's
+    // soundtrack ends here, as it does in the committed baseline; the hero's
+    // music is a separate asset on a separate controller.
     videoRef.current?.pause();
-    // Landing begins silent. The cinematic hero takes the same audio from this
-    // exact timestamp and advances it only while the visitor scrolls.
     audioRef.current?.pause();
-    window.dispatchEvent(new Event("obsidian:intro-score-ready"));
     setFilmEnded(true);
   };
-
-  // The score outlives the curtain and fades itself out at the end.
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio || phase === "gone") return;
-
-    let raf = 0;
-    const tick = () => {
-      const left = audio.duration - audio.currentTime;
-      if (Number.isFinite(left)) {
-        audio.volume = left < FADE_OUT_SECONDS ? Math.max(0, left / FADE_OUT_SECONDS) : 1;
-      }
-      raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [phase]);
 
   const visible = phase === "idle" || phase === "playing" || phase === "curtain";
 
@@ -239,10 +241,13 @@ export function OpeningSequence() {
       {visible && (
         <div
           ref={rootRef}
-          className="fixed inset-0 z-100 bg-void transition-opacity ease-out"
+          className="fixed inset-0 z-100 bg-void ease-out"
           style={{
             opacity: phase === "curtain" ? 0 : 1,
-            transitionDuration: `${CURTAIN_MS}ms`,
+            // The film plane pushes past the camera as it dissolves, so the
+            // eye reads forward motion rather than a fade.
+            transform: phase === "curtain" ? "scale(1.06)" : "scale(1)",
+            transition: `opacity ${CURTAIN_MS}ms var(--ease-cinematic), transform ${CURTAIN_MS + 300}ms var(--ease-cinematic)`,
             cursor: phase === "playing" ? "none" : "auto",
             pointerEvents: phase === "curtain" ? "none" : "auto",
           }}

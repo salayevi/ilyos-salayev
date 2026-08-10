@@ -15,10 +15,16 @@ export type BeatContent = {
 /**
  * Windows on the scroll timeline. Each beat fades up, holds, then clears before
  * the next arrives, so the frame is never carrying two messages at once.
- * `in`/`out` are the ramp lengths inside the window.
+ *
+ * The first window opens *before* the timeline does. A window starting at
+ * exactly 0 is, by the definition below, fully faded out at 0 — which left the
+ * visitor landing on a hero with no headline on it until they scrolled. The
+ * lead-in is scroll distance that can never be reached, so the name is already
+ * on screen the moment the door opens, and the fade-out that follows is
+ * unchanged.
  */
 export const BEATS = [
-  { from: 0.0, to: 0.24 },
+  { from: -0.1, to: 0.24 },
   { from: 0.26, to: 0.5 },
   { from: 0.52, to: 0.78 },
   { from: 0.8, to: 1.0 },

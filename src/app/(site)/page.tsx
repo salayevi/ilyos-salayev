@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { StageAnchor } from "@/components/cinema/stage";
 import { CinematicHero } from "@/components/hero/cinematic-hero";
 import { Photo } from "@/components/site/photo";
 import { ProductCard } from "@/components/site/product-card";
@@ -63,6 +64,13 @@ export default async function HomePage() {
         availability={s.availability}
         availabilityLabel={s.availabilityLabel}
       />
+
+      {/*
+        Act III — the interior. Everything from stepping through the door to
+        the last journal entry shares one slice of the score, so the music
+        keeps moving through the reading without ever getting ahead of it.
+      */}
+      <StageAnchor name="interior" />
 
       {/* ---------------- stack rail ---------------- */}
       <div className="rail relative z-10 overflow-x-auto border-y border-line">
@@ -255,6 +263,9 @@ export default async function HomePage() {
           </ul>
         </section>
       )}
+
+      {/* Act IV — the resolve. The last stretch of the score lands with it. */}
+      <StageAnchor name="resolve" />
 
       {/* ---------------- contact ---------------- */}
       <div aria-hidden className="gold-rule" />

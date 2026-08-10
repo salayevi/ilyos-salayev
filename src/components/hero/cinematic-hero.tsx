@@ -1,7 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState } from "react";
 
+import { useCinema, useCinemaFrame, useSegment, useStage } from "@/components/cinema/use-cinema";
+import { useReducedMotion } from "@/components/cinema/use-reduced-motion";
+import { clamp01, damp, easeOutCubic, lerp } from "@/lib/cinema/easing";
+import { ACTS } from "@/lib/cinema/score";
 import { heroManifest } from "@/lib/hero-manifest";
 import { FrameSequence, pickTier } from "./frame-sequence";
 import {
@@ -14,61 +18,92 @@ import {
   beatShift,
   type BeatContent,
 } from "./hero-beats";
-import { SceneAudio, ScrollLinkedScore } from "./scene-audio";
+import { HeroScore } from "@/lib/cinema/hero-score";
+
+/**
+ * Act II — the passage.
+ *
+ * The hero no longer keeps a clock. It declares a window on the master
+ * timeline and is told where it is; the playhead it reads is the same number
+ * the soundtrack reads, which is the whole reason picture and score cannot
+ * drift apart any more.
+ *
+ * Three deliberate details:
+ *
+ * - **One damped playhead for everything.** The old code eased the *frames*
+ *   but drew the type, the exit fade and the readout from the un-eased value,
+ *   so the picture trailed its own captions by several frames on any fast
+ *   scroll. Here a single damped value drives all of them, so the scene has
+ *   weight without coming apart.
+ * - **The camera is in the draw, not in CSS.** Breathing, the door-entry push
+ *   and pointer parallax are folded into the `drawImage` rectangle. A CSS
+ *   transform on the canvas would resample an already-rasterised bitmap and
+ *   soften it; adjusting the cover-fit costs nothing and stays sharp.
+ * - **No geometry reads in the loop.** Scroll position arrives from the shared
+ *   ticker, already measured once for the whole page.
+ */
 
 /** Scroll distance given to the sequence. Long enough that a frame lasts ~3vh. */
 const SCRUB_VH = 520;
-/** Playhead easing per frame — low enough to feel weighted, high enough to track. */
-const EASE = 0.11;
+/** Seconds for the camera to close 63% of the gap to the true playhead. */
+const PLAYHEAD_TAU = 0.085;
 /** Where the scene starts dissolving to black so the next section can rise. */
 const EXIT_FROM = 0.9;
+/** How far the camera is pushed back before it crosses the threshold. */
+const ENTRY_ZOOM = 1.06;
+/** Pointer parallax, in pixels at the edge of the frame. */
+const PARALLAX = 10;
 
 export function CinematicHero(content: BeatContent) {
-  const sectionRef = useRef<HTMLElement>(null);
+  const cinema = useCinema();
+  const reduced = useReducedMotion();
+
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const audioRef = useRef<SceneAudio | null>(null);
-  const introScoreRef = useRef<ScrollLinkedScore | null>(null);
   const beatRefs = useRef<(HTMLDivElement | null)[]>([]);
   const exitRef = useRef<HTMLDivElement>(null);
   const cueRef = useRef<HTMLDivElement>(null);
   const barRef = useRef<HTMLSpanElement>(null);
   const readoutRef = useRef<HTMLSpanElement>(null);
+  const bloomRef = useRef<HTMLDivElement>(null);
+
+  const stageRef = useStage("passage");
+  const sequenceRef = useRef<FrameSequence | null>(null);
+  // One controller, fed the passage's own progress — the same number that
+  // drives the frames, the camera and the beats. It reads nothing else.
+  const [score] = useState(() => new HeroScore());
+
+  /** Position on the passage act, 0..1. Written by the timeline, read by the loop. */
+  const target = useRef(0);
+  const playhead = useRef(0);
+  const pointer = useRef({ x: 0, y: 0, tx: 0, ty: 0 });
+  const painter = useRef<((frameTime: number, dt: number) => void) | null>(null);
 
   const [ready, setReady] = useState(false);
   const [loaded, setLoaded] = useState(0);
-  const [soundOn, setSoundOn] = useState(false);
+  const [soundOn, setSoundOn] = useState(true);
 
-  const subscribe = useCallback((cb: () => void) => {
-    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    mq.addEventListener("change", cb);
-    return () => mq.removeEventListener("change", cb);
-  }, []);
-  const reduced = useSyncExternalStore(
-    subscribe,
-    () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
-    () => false,
-  );
-
+  // ── the sequence, and the camera that looks at it ─────────────────────────
   useEffect(() => {
     if (reduced) return;
-
     const canvas = canvasRef.current;
-    const section = sectionRef.current;
-    if (!canvas || !section) return;
+    if (!canvas) return;
 
     const ctx = canvas.getContext("2d", { alpha: false });
     if (!ctx) return;
 
     const { tier } = pickTier(heroManifest);
     const seq = new FrameSequence(heroManifest, tier, {
-      onProgress: (n) => setLoaded(n),
+      // Stepped, not per frame: this drives a loading bar, and re-rendering the
+      // hero 134 times to move it a pixel is work the sequence needs.
+      onProgress: (n) =>
+        setLoaded((prev) => (n - prev >= 4 || n === heroManifest.total ? n : prev)),
       onCoarseReady: () => setReady(true),
     });
     seq.start();
+    sequenceRef.current = seq;
 
     let width = 0;
     let height = 0;
-    let lastDrawn = -1;
 
     const resize = () => {
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -79,85 +114,50 @@ export function CinematicHero(content: BeatContent) {
       const w = canvas.clientWidth || window.innerWidth;
       const h = canvas.clientHeight || window.innerHeight;
       if (w <= 0 || h <= 0 || (w === width && h === height)) return;
-
       width = w;
       height = h;
       canvas.width = Math.round(w * dpr);
       canvas.height = Math.round(h * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      lastDrawn = -1; // force a repaint at the new size
     };
 
-    /** Returns false when no frame was available, so the caller can retry. */
-    const draw = (frame: number) => {
-      const img = seq.frameFor(frame);
-      if (!img) return false;
+    /**
+     * Paints one frame of the passage.
+     *
+     * `zoom` and the offsets are the camera: they combine the entry push, the
+     * idle breath and the pointer drift into a single cover-fit rectangle.
+     */
+    painter.current = (frameTime, dt) => {
+      if (width === 0 || height === 0) resize();
+      if (width === 0 || height === 0) return;
 
-      // cover-fit: fill the viewport, crop the overflow, never letterbox
-      const scale = Math.max(width / img.naturalWidth, height / img.naturalHeight);
+      const p = playhead.current;
+      const index = Math.round(p * (seq.total - 1));
+      const img = seq.frameFor(index);
+      if (!img) return;
+      seq.setPlayhead(index);
+
+      const entry = cinema ? cinema.entry.value : 1;
+      // The camera is still outside the door until `entry` completes, so it
+      // starts pushed back and settles forward as the threshold is crossed.
+      const push = lerp(ENTRY_ZOOM, 1, easeOutCubic(entry));
+
+      // A slow breath, yielding to the scrub: when the visitor is driving the
+      // scene the scene stops adding motion of its own.
+      const stillness = 1 - clamp01(Math.abs(target.current - p) * 60);
+      const breath = Math.sin(frameTime * 0.42) * 0.0045 * stillness;
+      const sway = Math.sin(frameTime * 0.31) * 3.2 * stillness;
+
+      pointer.current.x = damp(pointer.current.x, pointer.current.tx, 0.32, dt);
+      pointer.current.y = damp(pointer.current.y, pointer.current.ty, 0.32, dt);
+
+      const cover = Math.max(width / img.naturalWidth, height / img.naturalHeight);
+      const scale = cover * (push + breath);
       const w = img.naturalWidth * scale;
       const h = img.naturalHeight * scale;
-      ctx.drawImage(img, (width - w) / 2, (height - h) / 2, w, h);
-      return true;
-    };
-
-    let playhead = 0;
-    let lastProgress = 0;
-    let velocity = 0;
-    let raf = 0;
-
-    const tick = () => {
-      const rect = section.getBoundingClientRect();
-      const span = rect.height - window.innerHeight;
-      const p = span > 0 ? Math.min(1, Math.max(0, -rect.top / span)) : 0;
-
-      // Velocity feeds the wind layer; smoothed so a trackpad flick does not spike it.
-      velocity += (Math.min(1, Math.abs(p - lastProgress) * 26) - velocity) * 0.16;
-      lastProgress = p;
-
-      const target = p * (seq.total - 1);
-      playhead += (target - playhead) * EASE;
-      // Snap once we are within a hair, so a held position lands on an exact frame.
-      if (Math.abs(target - playhead) < 0.01) playhead = target;
-
-      const frame = Math.round(playhead);
-      if (frame !== lastDrawn) {
-        // Only commit lastDrawn on a real paint. Early ticks run before any
-        // frame has decoded; recording them would leave the canvas black
-        // forever, because the playhead has not moved since.
-        if (draw(frame)) lastDrawn = frame;
-        seq.setPlayhead(frame);
-      }
-
-      introScoreRef.current?.update(p, velocity);
-      // A visitor who skips the entrance can still choose the synthesised
-      // ambient score manually; otherwise the entrance score takes priority.
-      if (!introScoreRef.current) audioRef.current?.update(p, velocity);
-
-      // Overlays are written straight to the DOM. Calling setState here would
-      // re-render the whole hero sixty times a second and eat the frame budget
-      // the sequence needs.
-      for (let i = 0; i < BEATS.length; i += 1) {
-        const el = beatRefs.current[i];
-        if (!el) continue;
-        const o = beatOpacity(p, i);
-        el.style.opacity = String(o);
-        el.style.transform = `translate3d(0, ${beatShift(p, i)}px, 0)`;
-        // Links only take clicks while their beat is actually legible.
-        el.style.pointerEvents = o > 0.55 ? "auto" : "none";
-      }
-
-      if (exitRef.current) {
-        const t = Math.max(0, (p - EXIT_FROM) / (1 - EXIT_FROM));
-        exitRef.current.style.opacity = String(t * t);
-      }
-      if (cueRef.current) cueRef.current.style.opacity = String(Math.max(0, 1 - p / 0.08));
-      if (barRef.current) barRef.current.style.width = `${p * 100}%`;
-      if (readoutRef.current) {
-        readoutRef.current.textContent = String(Math.round(p * 100)).padStart(3, "0");
-      }
-
-      raf = requestAnimationFrame(tick);
+      const dx = (width - w) / 2 - pointer.current.x * PARALLAX;
+      const dy = (height - h) / 2 + sway - pointer.current.y * PARALLAX * 0.6;
+      ctx.drawImage(img, dx, dy, w, h);
     };
 
     resize();
@@ -165,60 +165,95 @@ export function CinematicHero(content: BeatContent) {
     // Catches the case where the container gains its real size after mount.
     const ro = new ResizeObserver(resize);
     ro.observe(canvas);
-    raf = requestAnimationFrame(tick);
+
+    const finePointer = window.matchMedia("(pointer: fine)").matches;
+    const onPointerMove = (event: PointerEvent) => {
+      pointer.current.tx = (event.clientX / window.innerWidth) * 2 - 1;
+      pointer.current.ty = (event.clientY / window.innerHeight) * 2 - 1;
+    };
+    if (finePointer) window.addEventListener("pointermove", onPointerMove, { passive: true });
 
     return () => {
-      cancelAnimationFrame(raf);
+      painter.current = null;
+      sequenceRef.current = null;
       window.removeEventListener("resize", resize);
+      if (finePointer) window.removeEventListener("pointermove", onPointerMove);
       ro.disconnect();
       seq.destroy();
     };
-  }, [reduced]);
+  }, [reduced, cinema]);
 
-  useEffect(() => {
-    type ScoreWindow = Window & { __obsidianScrollScore?: HTMLAudioElement };
-    const adopt = () => {
-      const audio = (window as ScoreWindow).__obsidianScrollScore;
-      if (!audio) return;
-      introScoreRef.current?.dispose();
-      introScoreRef.current = new ScrollLinkedScore(audio);
-      setSoundOn(true);
-    };
-    adopt();
-    window.addEventListener("obsidian:intro-score-ready", adopt);
-    return () => {
-      window.removeEventListener("obsidian:intro-score-ready", adopt);
-      introScoreRef.current?.dispose();
-      introScoreRef.current = null;
-    };
-  }, []);
+  // ── the window on the master timeline ─────────────────────────────────────
+  useSegment("passage", ACTS.passage.from, ACTS.passage.to, (local) => {
+    target.current = local;
+  });
 
-  useEffect(() => {
-    return () => {
-      audioRef.current?.dispose();
-      audioRef.current = null;
-    };
-  }, []);
+  // ── one render pass per frame, driven by the shared loop ──────────────────
+  useCinemaFrame((frame) => {
+    if (reduced) return;
 
-  const toggleSound = async () => {
-    if (introScoreRef.current) {
-      if (soundOn) {
-        introScoreRef.current.pause();
-        setSoundOn(false);
-      } else {
-        await introScoreRef.current.resume();
-        setSoundOn(true);
-      }
-      return;
+    /*
+      The soundtrack is a function of this one value and nothing else — the same
+      progress that drives the frames, the camera and the beats.
+
+      It is handed over on the shared loop rather than from the segment's render
+      callback, because that callback only fires when progress *changes*: a
+      visitor who stops scrolling would never be mentioned again, and the music
+      would play on for ever. `presence` closes it down over the same stretch in
+      which the scene dissolves to black, so the music ends with the passage
+      instead of following them into the reading below.
+    */
+    const local = target.current;
+    score.setProgress(local, 1 - clamp01((local - EXIT_FROM) / (1 - EXIT_FROM)));
+
+    const settled = playhead.current === target.current;
+    // Scrolled past and settled: the sticky container has released and there
+    // is nothing on screen to draw. Costs one comparison instead of a frame.
+    if (settled && target.current > 0.9995) return;
+
+    playhead.current = damp(playhead.current, target.current, PLAYHEAD_TAU, frame.dt);
+    const p = playhead.current;
+
+    painter.current?.(frame.time, frame.dt);
+
+    // The type resolves *with* the camera rather than after it: while the
+    // threshold is being crossed the first beat rises into place, so the
+    // headline arrives as part of the move instead of appearing once it lands.
+    const arrival = easeOutCubic(cinema ? cinema.entry.value : 1);
+
+    // Overlays are written straight to the DOM. Calling setState here would
+    // re-render the whole hero sixty times a second and eat the frame budget
+    // the sequence needs.
+    for (let i = 0; i < BEATS.length; i += 1) {
+      const el = beatRefs.current[i];
+      if (!el) continue;
+      const o = beatOpacity(p, i) * arrival;
+      el.style.opacity = String(o);
+      el.style.transform = `translate3d(0, ${beatShift(p, i) + (1 - arrival) * 30}px, 0)`;
+      // Links only take clicks while their beat is actually legible.
+      el.style.pointerEvents = o > 0.55 ? "auto" : "none";
     }
-    if (!audioRef.current) audioRef.current = new SceneAudio();
-    if (soundOn) {
-      await audioRef.current.stop();
-      setSoundOn(false);
-    } else {
-      await audioRef.current.start();
-      setSoundOn(true);
+
+    if (exitRef.current) {
+      const t = Math.max(0, (p - EXIT_FROM) / (1 - EXIT_FROM));
+      exitRef.current.style.opacity = String(t * t);
     }
+    if (cueRef.current) cueRef.current.style.opacity = String(Math.max(0, 1 - p / 0.08));
+    if (barRef.current) barRef.current.style.width = `${p * 100}%`;
+    if (readoutRef.current) {
+      readoutRef.current.textContent = String(Math.round(p * 100)).padStart(3, "0");
+    }
+    // The doorway glows from inside until the camera is through it.
+    if (bloomRef.current && cinema) {
+      bloomRef.current.style.opacity = String((1 - easeOutCubic(cinema.entry.value)) * 0.9);
+    }
+  });
+
+  useEffect(() => () => score.dispose(), [score]);
+
+  const toggleSound = () => {
+    score.toggle();
+    setSoundOn(score.isOn);
   };
 
   const pct = Math.round((loaded / heroManifest.total) * 100);
@@ -254,9 +289,30 @@ export function CinematicHero(content: BeatContent) {
   }
 
   return (
-    <section ref={sectionRef} style={{ height: `${SCRUB_VH}vh` }} className="relative bg-void">
+    <section
+      ref={stageRef}
+      data-stage="passage"
+      style={{ height: `${SCRUB_VH}vh` }}
+      className="relative bg-void"
+    >
       <div className="sticky top-0 h-[100svh] w-full overflow-hidden">
         <canvas ref={canvasRef} className="absolute inset-0 size-full" aria-hidden />
+
+        {/*
+          The light on the other side of the door. It is at full strength while
+          the curtain is still up and burns off as the camera moves through, so
+          the cut from film to scene is a move rather than a dissolve.
+        */}
+        <div
+          ref={bloomRef}
+          aria-hidden
+          className="pointer-events-none absolute inset-0"
+          style={{
+            opacity: 0,
+            background:
+              "radial-gradient(52% 46% at 50% 46%, rgb(227 196 138 / 0.5), rgb(196 120 60 / 0.16) 45%, transparent 72%)",
+          }}
+        />
 
         {/* Grades the daylight footage into the site's palette at the edges. */}
         <div
