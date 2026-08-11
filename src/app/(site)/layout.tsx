@@ -6,6 +6,7 @@ import { SiteNav } from "@/components/site/nav";
 import { VisitorTracker } from "@/components/site/visitor-tracker";
 import { getAnalyticsConsent } from "@/lib/analytics";
 import { getSettings } from "@/lib/queries";
+import { jsonLd, personSchema, websiteSchema } from "@/lib/seo";
 import { readSession } from "@/lib/session";
 
 // Content is editable from /admin, so pages must read the database per request
@@ -27,6 +28,16 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
       is what lets the whole page scrub — forwards and backwards — as one piece.
     */
     <CinemaProvider>
+      {/*
+        One graph for the whole public tree: the person and the site are
+        declared once here, and each page's own entities reference them by
+        @id rather than repeating the author on every URL.
+      */}
+      <script
+        type="application/ld+json"
+        // Serialised from typed objects in lib/seo, never from user input.
+        dangerouslySetInnerHTML={{ __html: jsonLd(personSchema(settings), websiteSchema(settings)) }}
+      />
       <a
         href="#main"
         className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-60 focus:rounded-lg focus:bg-gold focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-void"

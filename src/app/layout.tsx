@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Instrument_Serif } from "next/font/google";
 
+import { KEYWORDS, SITE_NAME, SITE_URL } from "@/lib/seo";
+
 import "./globals.css";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-geist", display: "swap" });
@@ -13,22 +15,65 @@ const instrument = Instrument_Serif({
   display: "swap",
 });
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+const siteUrl = SITE_URL;
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "Ilyos Salayev — sun'iy intellekt muhandisi",
+    default: "Ilyos Salayev — sun'iy intellekt muhandisi va veb dasturchi",
     template: "%s · Ilyos Salayev",
   },
   description:
-    "Ovoz, xotira va real vaqt oqimlari ustida ishlaydigan sun'iy intellekt mahsulotlari. Toshkent.",
+    "Ovoz, xotira va real vaqt oqimlari ustida ishlaydigan sun'iy intellekt mahsulotlari. " +
+    "Biznes uchun saytlar, tayyor veb-yechimlar va muhandislik xizmatlari. Toshkent.",
+  keywords: KEYWORDS,
+  authors: [{ name: SITE_NAME, url: siteUrl }],
+  creator: SITE_NAME,
+  publisher: SITE_NAME,
+  applicationName: SITE_NAME,
+  category: "technology",
+  // One canonical origin, and the Uzbek page is the default for every locale
+  // that has no translation of its own.
+  alternates: {
+    canonical: "/",
+    languages: { "uz-UZ": "/", "x-default": "/" },
+  },
   openGraph: {
     type: "website",
     locale: "uz_UZ",
-    siteName: "Ilyos Salayev",
+    alternateLocale: ["ru_RU", "en_US"],
+    siteName: SITE_NAME,
     url: siteUrl,
+    title: "Ilyos Salayev — sun'iy intellekt muhandisi va veb dasturchi",
+    description:
+      "Ovoz, xotira va real vaqt tizimlari. Tayyor saytlar va muhandislik xizmatlari. Toshkent.",
+    images: [
+      {
+        url: "/me/portrait.webp",
+        width: 1400,
+        height: 1400,
+        alt: "Ilyos Salayev — sun'iy intellekt muhandisi, Toshkent",
+      },
+    ],
   },
+  twitter: {
+    card: "summary_large_image",
+    title: "Ilyos Salayev — sun'iy intellekt muhandisi",
+    description: "Ovoz, xotira va real vaqt tizimlari. Tayyor saytlar. Toshkent.",
+    images: ["/me/portrait.webp"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
+  },
+  formatDetection: { telephone: false, address: false, email: false },
 };
 
 export const viewport: Viewport = {
