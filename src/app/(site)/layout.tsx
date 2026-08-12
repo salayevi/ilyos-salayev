@@ -6,7 +6,7 @@ import { SiteNav } from "@/components/site/nav";
 import { VisitorTracker } from "@/components/site/visitor-tracker";
 import { getAnalyticsConsent } from "@/lib/analytics";
 import { getSettings } from "@/lib/queries";
-import { jsonLd, personSchema, websiteSchema } from "@/lib/seo";
+import { jsonLd, organizationSchema, personSchema, websiteSchema } from "@/lib/seo";
 import { readSession } from "@/lib/session";
 
 // Content is editable from /admin, so pages must read the database per request
@@ -36,7 +36,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
       <script
         type="application/ld+json"
         // Serialised from typed objects in lib/seo, never from user input.
-        dangerouslySetInnerHTML={{ __html: jsonLd(personSchema(settings), websiteSchema(settings)) }}
+        dangerouslySetInnerHTML={{ __html: jsonLd(personSchema(settings), organizationSchema(settings), websiteSchema(settings)) }}
       />
       <a
         href="#main"

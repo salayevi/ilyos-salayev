@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -18,7 +19,14 @@ export default async function DashLayout({ children }: { children: React.ReactNo
       <header className="glass sticky top-0 z-40 border-b border-line">
         <div className="mx-auto flex h-14 max-w-[1280px] items-center justify-between px-4 md:px-8">
           <div className="flex items-baseline gap-3">
-            <span className="text-[13px] font-medium tracking-[0.2em]">IS</span>
+            <Image
+              src="/brand/logo-ilyos-salayev.webp"
+              alt=""
+              width={64}
+              height={64}
+              priority
+              className="size-7 rounded-full object-cover"
+            />
             <span className="label text-[10px]">Panel</span>
           </div>
           <div className="flex items-center gap-2">

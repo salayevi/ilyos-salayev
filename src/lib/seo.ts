@@ -54,6 +54,9 @@ export function personSchema(s: SiteSettings): Jsonld {
     name: SITE_NAME,
     url: SITE_URL,
     image: abs("/me/portrait.webp"),
+    // The dragon monogram is the service mark. Declaring it separately from the
+    // portrait lets a search result show the brand where a face would be wrong.
+    logo: abs("/brand/logo-512.png"),
     jobTitle: "Sun'iy intellekt muhandisi",
     email: s.email ? `mailto:${s.email}` : undefined,
     address: s.location
@@ -81,6 +84,32 @@ export function websiteSchema(s: SiteSettings): Jsonld {
     inLanguage: "uz-UZ",
     description: s.heroSubline,
     publisher: { "@id": `${SITE_URL}/#person` },
+  };
+}
+
+/**
+ * The service side of the same identity. A Person explains who does the work;
+ * an Organization is what a buyer of a ready-made site is transacting with, and
+ * it is the node Google reads for a brand logo in results.
+ */
+export function organizationSchema(s: SiteSettings): Jsonld {
+  return {
+    "@type": "Organization",
+    "@id": `${SITE_URL}/#organization`,
+    name: SITE_NAME,
+    url: SITE_URL,
+    logo: {
+      "@type": "ImageObject",
+      url: abs("/brand/logo-512.png"),
+      width: 512,
+      height: 512,
+      caption: `${SITE_NAME} — xizmat logotipi`,
+    },
+    image: abs("/brand/logo-512.png"),
+    email: s.email ? `mailto:${s.email}` : undefined,
+    founder: { "@id": `${SITE_URL}/#person` },
+    areaServed: "UZ",
+    knowsLanguage: ["uz", "ru", "en"],
   };
 }
 

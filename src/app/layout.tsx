@@ -73,6 +73,11 @@ export const metadata: Metadata = {
       "max-video-preview": -1,
     },
   },
+  icons: {
+    icon: [{ url: "/icon.png", type: "image/png", sizes: "512x512" }],
+    apple: [{ url: "/apple-icon.png", sizes: "180x180" }],
+    shortcut: ["/icon.png"],
+  },
   formatDetection: { telephone: false, address: false, email: false },
 };
 
