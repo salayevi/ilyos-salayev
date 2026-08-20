@@ -1,5 +1,14 @@
 import { z } from "zod";
 
+import {
+  BUDGETS,
+  CONTACT_METHODS,
+  SERVICES,
+  STAGE_VALUES,
+  TIERS,
+  TIMELINES,
+} from "./leads";
+
 /** Accepts a textarea where each line is one entry; blank lines are dropped. */
 const lines = z
   .string()
@@ -145,12 +154,48 @@ export const postSchema = z.object({
   published: z.coerce.boolean().default(true),
 });
 
+/**
+ * A select whose options are fixed, but which is allowed to arrive empty.
+ *
+ * `z.enum([...])` would reject `""`, and `""` is exactly what an untouched
+ * select submits — every one of these fields is optional. Anything that is
+ * neither blank nor a known option is a forged submission, and is dropped to
+ * blank rather than rejected: a bot posting `budget=<script>` should not be
+ * able to fail a real person's form.
+ */
+const choice = (allowed: readonly string[]) =>
+  z
+    .string()
+    .trim()
+    .default("")
+    .transform((v) => (allowed.includes(v) ? v : ""));
+
 export const messageSchema = z.object({
   name: z.string().trim().min(2, "Ismingizni yozing").max(80),
   email: z.email("Email noto'g'ri").max(160),
   body: z.string().trim().min(10, "Kamida 10 ta belgi").max(4000),
+
+  // The optional qualifying block. None of it can fail the form.
+  company: z.string().trim().max(120).default(""),
+  phone: z.string().trim().max(40).default(""),
+  service: choice(SERVICES.map((c) => c.value)),
+  tier: choice(TIERS.map((c) => c.value)),
+  budget: choice(BUDGETS.map((c) => c.value)),
+  timeline: choice(TIMELINES.map((c) => c.value)),
+  preferredContact: choice(CONTACT_METHODS.map((c) => c.value)),
+
   /** Honeypot — real people never fill a field they cannot see. */
   website: z.string().max(0).optional().default(""),
+});
+
+export const leadStatusSchema = z.object({
+  id: z.coerce.number().int().positive(),
+  status: z.enum(STAGE_VALUES),
+});
+
+export const leadNotesSchema = z.object({
+  id: z.coerce.number().int().positive(),
+  notes: z.string().trim().max(4000).default(""),
 });
 
 export const loginSchema = z.object({
@@ -184,6 +229,7 @@ export type ProductInput = z.infer<typeof productSchema>;
 export type PostInput = z.infer<typeof postSchema>;
 export type SettingsInput = z.infer<typeof settingsSchema>;
 export type OrderStatus = z.infer<typeof orderStatusSchema>;
+export type MessageInput = z.infer<typeof messageSchema>;
 
 export type Metric = { value: string; label: string };
 

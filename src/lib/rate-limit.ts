@@ -20,7 +20,6 @@ import "server-only";
 type Window = { count: number; resetAt: number };
 
 const WINDOW_MS = 15 * 60 * 1000;
-const MAX_ATTEMPTS = 8;
 
 const windows = new Map<string, Window>();
 
@@ -36,7 +35,14 @@ function sweep(now: number) {
 
 export type RateVerdict = { allowed: true } | { allowed: false; retryAfterSeconds: number };
 
-export function checkRate(key: string): RateVerdict {
+/**
+ * `max` is per caller because the two callers are not the same problem. A
+ * password guess is cheap to retry and expensive to get wrong, so the login
+ * budget is small. A contact form is something a real person may legitimately
+ * resubmit after a typo, so its budget is a little larger — the aim there is
+ * to stop a script, not to punish a second attempt.
+ */
+export function checkRate(key: string, max = 8): RateVerdict {
   const now = Date.now();
   sweep(now);
 
@@ -46,7 +52,7 @@ export function checkRate(key: string): RateVerdict {
     return { allowed: true };
   }
 
-  if (current.count >= MAX_ATTEMPTS) {
+  if (current.count >= max) {
     return { allowed: false, retryAfterSeconds: Math.ceil((current.resetAt - now) / 1000) };
   }
 

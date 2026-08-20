@@ -9,7 +9,15 @@ export const metadata: Metadata = {
   description: "Loyihangiz haqida yozing — bir ish kuni ichida javob beraman.",
 };
 
-export default async function ContactPage() {
+export default async function ContactPage({
+  searchParams,
+}: {
+  // A plan card on /pricing links here with `?tarif=dog|wolf|dragon`, so the
+  // enquiry can open already knowing which conversation it is. Validated in
+  // the action regardless — this only decides what the form shows.
+  searchParams: Promise<{ tarif?: string }>;
+}) {
+  const { tarif } = await searchParams;
   const s = await getSettings();
 
   const rows = [
@@ -41,7 +49,7 @@ export default async function ContactPage() {
           </p>
 
           <div className="mt-7 md:mt-11">
-            <ContactForm />
+            <ContactForm defaultTier={tarif ?? ""} />
           </div>
         </div>
 

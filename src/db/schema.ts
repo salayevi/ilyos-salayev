@@ -158,15 +158,61 @@ export const testimonials = pgTable("testimonials", {
   ...stamps,
 });
 
-export const messages = pgTable("messages", {
-  id: serial("id").primaryKey(),
-  name: text("name").notNull(),
-  email: text("email").notNull(),
-  body: text("body").notNull(),
-  read: boolean("read").notNull().default(false),
-  archived: boolean("archived").notNull().default(false),
-  ...stamps,
-});
+/**
+ * An inbound enquiry, and the lead it becomes.
+ *
+ * This started as a three-field contact form and the table shows it. The extra
+ * columns below are what a first reply actually needs to be useful: a message
+ * saying "I want a website" and one saying "a store, roughly $4k, needed in six
+ * weeks" deserve different answers, and asking those questions in the reply
+ * costs a day per round trip.
+ *
+ * Everything added is optional with an empty default, so the rows written by
+ * the old form stay valid and the migration is additive — no backfill, no
+ * rewrite, nothing to undo if a field turns out not to earn its place.
+ *
+ * `status` is the pipeline. It defaults to `new`, which is exactly what every
+ * existing row already is.
+ */
+export const messages = pgTable(
+  "messages",
+  {
+    id: serial("id").primaryKey(),
+    name: text("name").notNull(),
+    email: text("email").notNull(),
+    body: text("body").notNull(),
+
+    /** Qualifying detail. Blank means the sender skipped the optional block. */
+    company: text("company").notNull().default(""),
+    phone: text("phone").notNull().default(""),
+    /** Which kind of work — matches the service categories offered on the site. */
+    service: text("service").notNull().default(""),
+    /**
+     * dog · wolf · dragon, carried over from the plan card the visitor clicked.
+     * It is the single most useful thing to know before replying, and it costs
+     * the sender nothing because the choice was already made on /pricing.
+     */
+    tier: text("tier").notNull().default(""),
+    /** A bucket, never a figure — an exact number here would be a fiction. */
+    budget: text("budget").notNull().default(""),
+    timeline: text("timeline").notNull().default(""),
+    /** email · telegram · phone */
+    preferredContact: text("preferred_contact").notNull().default(""),
+
+    /** new · contacted · qualified · proposal · negotiation · won · lost */
+    status: text("status").notNull().default("new"),
+    /** Private working notes. Never shown to the sender. */
+    notes: text("notes").notNull().default(""),
+
+    read: boolean("read").notNull().default(false),
+    archived: boolean("archived").notNull().default(false),
+    ...stamps,
+  },
+  // The inbox is always read newest-first and almost always filtered by
+  // pipeline state, so both get an index rather than a sequential scan that
+  // grows with every enquiry ever received.
+  (t) => [index("messages_created_idx").on(t.createdAt), index("messages_status_idx").on(t.status)],
+);
 
 /**
  * One inbox for both revenue streams: a booking against a service tariff and a
