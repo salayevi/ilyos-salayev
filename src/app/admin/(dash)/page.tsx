@@ -75,7 +75,7 @@ export default async function AdminHome() {
             className="rounded-[12px] border border-line bg-s1 p-4 transition-colors hover:border-line-3 md:p-5"
           >
             <p className="label text-[10px]">{st.label}</p>
-            <p className="mt-2 font-display text-4xl text-gold md:text-5xl">{st.value}</p>
+            <p className="mt-2 font-display text-4xl text-accent-text md:text-5xl">{st.value}</p>
             <p className="mt-1 text-xs text-tt">{st.sub}</p>
           </Link>
         ))}
@@ -84,7 +84,7 @@ export default async function AdminHome() {
       <section className="mt-8 md:mt-10">
         <div className="flex items-baseline justify-between gap-3 border-b border-line pb-3">
           <h2 className="label text-[10px]">Oxirgi buyurtmalar</h2>
-          <Link href="/admin/orders" className="text-[13px] text-gold hover:text-gold-300">
+          <Link href="/admin/orders" className="text-[13px] text-accent-text hover:text-crimson-100">
             Hammasi &rarr;
           </Link>
         </div>
@@ -115,7 +115,7 @@ export default async function AdminHome() {
                     <p className="mt-1 text-[11px] text-ok">Telegram tasdiqlandi</p>
                   )}
                 </div>
-                <p className="font-mono text-sm text-gold">
+                <p className="font-mono text-sm text-accent-text">
                   {formatMoney(o.amount, o.currency) ?? "—"}
                 </p>
               </li>
@@ -127,7 +127,7 @@ export default async function AdminHome() {
       <section className="mt-8 md:mt-10">
         <div className="flex items-baseline justify-between gap-3 border-b border-line pb-3">
           <h2 className="label text-[10px]">Oxirgi xabarlar</h2>
-          <Link href="/admin/messages" className="text-[13px] text-gold hover:text-gold-300">
+          <Link href="/admin/messages" className="text-[13px] text-accent-text hover:text-crimson-100">
             Hammasi &rarr;
           </Link>
         </div>
@@ -142,7 +142,7 @@ export default async function AdminHome() {
                   <p className="font-medium">
                     {m.name}
                     {!m.read && (
-                      <span className="ml-2 rounded-full bg-gold px-1.5 py-0.5 text-[10px] font-medium text-void">
+                      <span className="ml-2 rounded-full bg-accent px-1.5 py-0.5 text-[10px] font-medium text-tp">
                         yangi
                       </span>
                     )}

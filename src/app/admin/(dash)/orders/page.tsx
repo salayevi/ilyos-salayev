@@ -5,7 +5,7 @@ import { getOrders } from "@/lib/queries";
 const FLOW = ["new", "contacted", "scheduled", "paid", "done", "declined"] as const;
 
 const STATUS_STYLES: Record<string, string> = {
-  new: "bg-gold text-void",
+  new: "bg-accent text-tp",
   contacted: "bg-info-bg text-info",
   scheduled: "bg-info-bg text-info",
   paid: "bg-ok-bg text-ok",
@@ -38,15 +38,15 @@ export default async function AdminOrders() {
       <div className="mt-6 grid grid-cols-2 gap-3 md:mt-8 md:grid-cols-3 md:gap-4">
         <div className="rounded-[12px] border border-line bg-s1 p-4 md:p-5">
           <p className="label text-[10px]">Ochiq</p>
-          <p className="mt-2 font-display text-4xl text-gold md:text-5xl">{open.length}</p>
+          <p className="mt-2 font-display text-4xl text-accent-text md:text-5xl">{open.length}</p>
         </div>
         <div className="rounded-[12px] border border-line bg-s1 p-4 md:p-5">
           <p className="label text-[10px]">Jami so&apos;rov</p>
-          <p className="mt-2 font-display text-4xl text-gold md:text-5xl">{rows.length}</p>
+          <p className="mt-2 font-display text-4xl text-accent-text md:text-5xl">{rows.length}</p>
         </div>
         <div className="col-span-2 rounded-[12px] border border-line bg-s1 p-4 md:col-span-1 md:p-5">
           <p className="label text-[10px]">To&apos;langan va yakunlangan</p>
-          <p className="mt-2 font-display text-3xl text-gold md:text-4xl">
+          <p className="mt-2 font-display text-3xl text-accent-text md:text-4xl">
             {Object.keys(earned).length === 0
               ? "—"
               : Object.entries(earned)
@@ -64,7 +64,7 @@ export default async function AdminOrders() {
             <li
               key={o.id}
               className={`rounded-[12px] border bg-s1 p-4 md:p-5 ${
-                o.status === "new" ? "border-gold/40" : "border-line"
+                o.status === "new" ? "border-line-accent" : "border-line"
               }`}
             >
               <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -84,7 +84,7 @@ export default async function AdminOrders() {
                 <p className="font-mono text-xs text-tt">{o.createdAt.toLocaleString("uz-UZ")}</p>
               </div>
 
-              <p className="mt-2 font-mono text-sm text-gold">
+              <p className="mt-2 font-mono text-sm text-accent-text">
                 {formatMoney(o.amount, o.currency) ?? "Narx kelishiladi"}
               </p>
               {o.telegramConfirmedAt && (
@@ -95,7 +95,7 @@ export default async function AdminOrders() {
 
               <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-sm">
                 <span className="text-tp">{o.name}</span>
-                <a href={`mailto:${o.email}`} className="text-gold hover:text-gold-300">
+                <a href={`mailto:${o.email}`} className="text-accent-text hover:text-crimson-100">
                   {o.email}
                 </a>
                 {o.phone && (

@@ -19,7 +19,7 @@ export default function NotFound() {
         <div className="mt-7 flex flex-col items-center gap-3 md:flex-row md:justify-center">
           <Link
             href="/"
-            className="inline-flex h-12 w-full max-w-xs items-center justify-center rounded-lg bg-gold px-7 text-[15px] font-medium text-void transition-colors hover:bg-gold-300 md:w-auto"
+            className="inline-flex h-12 w-full max-w-xs items-center justify-center rounded-lg bg-accent px-7 text-[15px] font-medium text-tp transition-colors hover:bg-accent-hover md:w-auto"
           >
             Bosh sahifa
           </Link>

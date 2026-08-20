@@ -56,16 +56,16 @@ export function BeatOne({ eyebrow, line1, line2, accent }: BeatContent) {
   return (
     <>
       <div className="flex items-center gap-3">
-        <span aria-hidden className="h-px w-6 bg-gold" />
+        <span aria-hidden className="h-px w-6 bg-accent" />
         <p className="label text-[10px] md:text-xs">{eyebrow}</p>
       </div>
       <h1
         className="mt-4 font-display text-[52px] leading-[0.95] tracking-[-0.03em] text-balance text-tp md:mt-6 md:text-[92px] lg:text-[112px]"
-        style={{ textShadow: "0 2px 40px rgb(5 6 7 / 0.55)" }}
+        style={{ textShadow: "0 2px 40px rgb(5 2 3 / 0.55)" }}
       >
         {line1}
         <br />
-        {line2} <span className="text-gold-300">{accent}</span>
+        {line2} <span className="text-crimson-100">{accent}</span>
       </h1>
     </>
   );
@@ -75,7 +75,7 @@ export function BeatTwo({ subline }: BeatContent) {
   return (
     <p
       className="max-w-[620px] text-lg leading-[1.7] text-tp md:text-2xl"
-      style={{ textShadow: "0 2px 30px rgb(5 6 7 / 0.7)" }}
+      style={{ textShadow: "0 2px 30px rgb(5 2 3 / 0.7)" }}
     >
       {subline}
     </p>
@@ -88,15 +88,15 @@ export function BeatThree({ availability, availabilityLabel }: BeatContent) {
       <div className="flex flex-wrap gap-3 md:gap-4">
         <Link
           href="/work"
-          className="inline-flex h-12 items-center rounded-lg bg-gold px-6 text-[15px] font-medium text-void transition-colors hover:bg-gold-300"
+          className="inline-flex h-12 items-center rounded-lg bg-accent px-6 text-[15px] font-medium text-tp transition-colors hover:bg-accent-hover"
         >
           Ishlarni ko&apos;rish
         </Link>
         <Link
           href="/about"
-          className="inline-flex h-12 items-center gap-2.5 rounded-lg border border-line-2 bg-[rgb(5_6_7/0.45)] px-5 text-[15px] font-medium backdrop-blur transition-colors hover:border-line-3 hover:bg-s2"
+          className="inline-flex h-12 items-center gap-2.5 rounded-lg border border-line-2 bg-[rgb(5_2_3/0.45)] px-5 text-[15px] font-medium backdrop-blur transition-colors hover:border-line-3 hover:bg-s2"
         >
-          Men haqimda <span className="text-gold">&rarr;</span>
+          Men haqimda <span className="text-accent-text">&rarr;</span>
         </Link>
       </div>
       <Availability status={availability} label={availabilityLabel} className="mt-5" />
@@ -108,9 +108,9 @@ export function BeatFour() {
   return (
     <p
       className="font-display text-[34px] leading-[1.15] tracking-[-0.02em] text-balance text-tp md:text-[56px]"
-      style={{ textShadow: "0 2px 40px rgb(5 6 7 / 0.6)" }}
+      style={{ textShadow: "0 2px 40px rgb(5 2 3 / 0.6)" }}
     >
-      Hikoya <span className="text-gold-300">pastda</span> davom etadi.
+      Hikoya <span className="text-crimson-100">pastda</span> davom etadi.
     </p>
   );
 }

@@ -9,9 +9,10 @@ import { useCinemaFrame } from "@/components/cinema/use-cinema";
 import { Availability } from "./availability";
 
 const LINKS = [
-  { href: "/work", label: "Ishlangan ishlar" },
-  { href: "/tayyor-saytlar", label: "Tayyor saytlar" },
+  { href: "/work", label: "Ishlar" },
   { href: "/services", label: "Xizmatlar" },
+  { href: "/pricing", label: "Tariflar" },
+  { href: "/tayyor-saytlar", label: "Tayyor saytlar" },
   { href: "/about", label: "Men haqimda" },
   { href: "/journal", label: "Jurnal" },
 ] as const;
@@ -20,6 +21,7 @@ const OPENING_COPY: Record<string, string> = {
   "/work": "Ishlar arxivi ochilmoqda",
   "/tayyor-saytlar": "Tayyor saytlar vitrinasiga kiring",
   "/services": "Hamkorlik shakllari ochilmoqda",
+  "/pricing": "Uch chuqurlik ochilmoqda",
   "/about": "Muhandis ortidagi hikoya",
   "/journal": "Yozuvlar va kuzatuvlar",
   "/contact": "Suhbat uchun joy ochilmoqda",
@@ -85,18 +87,27 @@ export function SiteNav({
   return (
     <>
       <header
-        className={`sticky top-0 z-40 bg-[rgb(5_6_7/0.35)] backdrop-blur-md transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+        className={`sticky top-0 z-40 bg-[rgb(5_2_3/0.35)] backdrop-blur-md transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${
           hidden && !open ? "-translate-y-full" : "translate-y-0"
         }`}
       >
+        {/*
+          Three columns from `xl` up, one row below it.
+
+          The wordmark used to be absolutely centred over a flex row, which
+          meant the links and the mark were laid out in ignorance of each other
+          — a sixth destination simply slid underneath it. As a grid track the
+          mark reserves its own width, the two `1fr` rails stay equal so it is
+          still exactly centred, and no amount of link text can reach it.
+        */}
         <nav
           aria-label="Asosiy"
-          className="relative mx-auto flex h-14 max-w-[1440px] items-center justify-between px-5 md:h-18 md:px-10 lg:px-20"
+          className="mx-auto flex h-14 max-w-[1440px] items-center justify-between px-5 md:h-18 md:px-10 xl:grid xl:grid-cols-[1fr_auto_1fr] xl:px-16"
         >
           <Link
             href="/"
             onClick={enter("/", "Bosh sahifa ochilmoqda")}
-            className="group absolute left-1/2 z-10 flex -translate-x-1/2 items-center gap-2.5 text-[11px] font-medium tracking-[0.16em] text-tp/90 transition-opacity hover:text-tp md:text-[13px]"
+            className="group z-10 flex items-center gap-2.5 text-[11px] font-medium tracking-[0.16em] text-tp/90 transition-opacity hover:text-tp md:text-[13px] xl:order-2 xl:justify-self-center"
             aria-label="Bosh sahifa"
           >
             <Image
@@ -112,9 +123,10 @@ export function SiteNav({
             <span className="hidden sm:inline">ILYOS SALAYEV</span>
           </Link>
 
-          {/* Five destinations no longer fit beside the wordmark at tablet
-              widths, so the full bar starts at `lg` and md keeps the sheet. */}
-          <ul className="hidden gap-5 text-[13px] whitespace-nowrap lg:flex xl:gap-7 xl:text-[14px]">
+          {/* Six destinations beside a centred wordmark and the action cluster
+              need roughly 1280px. Below that the full-screen sheet is the
+              better experience anyway — it is a designed menu, not a fallback. */}
+          <ul className="hidden gap-5 text-[13px] whitespace-nowrap xl:order-1 xl:flex xl:justify-self-start">
             {LINKS.map((l) => (
               <li key={l.href}>
                 <Link
@@ -129,13 +141,13 @@ export function SiteNav({
             ))}
           </ul>
 
-          <div className="hidden items-center gap-3 lg:flex">
+          <div className="hidden items-center gap-3 xl:order-3 xl:flex xl:justify-self-end">
             <Availability status={status} label={label} className="h-8 border-transparent bg-transparent text-xs opacity-70" />
             {hasAdminAccess && (
               <Link
                 href="/admin"
                 onClick={enter("/admin", "Boshqaruv markazi ochilmoqda")}
-                className="inline-flex h-9.5 items-center rounded-lg border border-gold/40 px-4 text-sm font-medium text-gold transition-colors hover:bg-gold-900"
+                className="inline-flex h-9.5 items-center rounded-lg border border-line-accent px-4 text-sm font-medium text-accent-text transition-colors hover:bg-crimson-900"
               >
                 Panel
               </Link>
@@ -154,7 +166,7 @@ export function SiteNav({
             onClick={() => setOpen(true)}
             aria-label="Menyuni ochish"
             aria-expanded={open}
-            className="flex size-11 flex-col items-end justify-center gap-[5px] lg:hidden"
+            className="flex size-11 flex-col items-end justify-center gap-[5px] xl:hidden"
           >
             <span aria-hidden className="block h-px w-5 bg-tp" />
             <span aria-hidden className="block h-px w-3.5 bg-tp" />
@@ -164,7 +176,7 @@ export function SiteNav({
 
       {open && (
         <div
-          className="fixed inset-0 z-50 flex flex-col bg-[rgb(23_27_33/0.97)] lg:hidden"
+          className="fixed inset-0 z-50 flex flex-col bg-[rgb(9_5_6/0.97)] xl:hidden"
           role="dialog"
           aria-modal="true"
           aria-label="Menyu"
@@ -207,7 +219,7 @@ export function SiteNav({
               ))}
               {hasAdminAccess && (
                 <li>
-                  <Link href="/admin" onClick={enter("/admin", "Boshqaruv markazi ochilmoqda")} className="block py-3 text-4xl font-medium tracking-[-0.02em] text-gold">
+                  <Link href="/admin" onClick={enter("/admin", "Boshqaruv markazi ochilmoqda")} className="block py-3 text-4xl font-medium tracking-[-0.02em] text-accent-text">
                     Panel
                   </Link>
                 </li>
@@ -222,7 +234,7 @@ export function SiteNav({
       {cueText && (
         <div className="pointer-events-none fixed inset-0 z-80 flex items-center justify-center bg-void/92 px-6 text-center backdrop-blur-sm">
           <div className="max-w-lg">
-            <span aria-hidden className="mx-auto mb-5 block h-px w-12 bg-gold" />
+            <span aria-hidden className="mx-auto mb-5 block h-px w-12 bg-accent" />
             <p className="label text-[10px]">Portfolio navigatsiyasi</p>
             <p className="mt-3 font-display text-4xl leading-none tracking-[-0.03em] text-tp md:text-6xl">{cueText}</p>
           </div>

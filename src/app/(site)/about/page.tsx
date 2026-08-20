@@ -81,7 +81,7 @@ export default async function AboutPage() {
                 {[1, 2, 3, 4, 5].map((i) => (
                   <span
                     key={i}
-                    className={`h-0.5 w-3.5 md:w-5.5 ${i <= s.depth ? "bg-gold" : "bg-line-2"}`}
+                    className={`h-0.5 w-3.5 md:w-5.5 ${i <= s.depth ? "bg-accent" : "bg-line-2"}`}
                   />
                 ))}
               </span>
@@ -102,11 +102,11 @@ export default async function AboutPage() {
             <li key={e.year} className="relative pb-8 last:pb-0 md:pb-12">
               <span
                 aria-hidden
-                className={`absolute top-1.5 -left-[27px] size-2.5 rounded-full border border-gold md:-left-[37px] md:size-2.75 ${
-                  e.current ? "bg-gold" : "bg-void"
+                className={`absolute top-1.5 -left-[27px] size-2.5 rounded-full border border-accent md:-left-[37px] md:size-2.75 ${
+                  e.current ? "bg-accent" : "bg-void"
                 }`}
               />
-              <p className="font-mono text-xs text-gold md:text-sm">{e.year}</p>
+              <p className="font-mono text-xs text-accent-text md:text-sm">{e.year}</p>
               <p className="mt-1.5 text-lg font-medium md:mt-2 md:text-[28px]">{e.role}</p>
               <p className="mt-0.5 text-sm text-tt md:mt-1 md:text-base">{e.org}</p>
             </li>

@@ -20,13 +20,13 @@ export default async function AdminMessages({
         <div className="flex gap-2">
           <a
             href="/admin/messages"
-            className={`${pill} ${archived ? "border-line-2 text-ts hover:text-tp" : "border-gold bg-gold text-void"}`}
+            className={`${pill} ${archived ? "border-line-2 text-ts hover:text-tp" : "border-accent bg-accent text-tp"}`}
           >
             Kiruvchi
           </a>
           <a
             href="/admin/messages?arxiv=1"
-            className={`${pill} ${archived ? "border-gold bg-gold text-void" : "border-line-2 text-ts hover:text-tp"}`}
+            className={`${pill} ${archived ? "border-accent bg-accent text-tp" : "border-line-2 text-ts hover:text-tp"}`}
           >
             Arxiv
           </a>
@@ -43,14 +43,14 @@ export default async function AdminMessages({
             <li
               key={m.id}
               className={`rounded-[12px] border bg-s1 p-4 md:p-5 ${
-                m.read ? "border-line" : "border-gold/40"
+                m.read ? "border-line" : "border-line-accent"
               }`}
             >
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <p className="flex items-center gap-2 font-medium">
                   {m.name}
                   {!m.read && (
-                    <span className="rounded-full bg-gold px-1.5 py-0.5 text-[10px] text-void">
+                    <span className="rounded-full bg-accent px-1.5 py-0.5 text-[10px] text-tp">
                       yangi
                     </span>
                   )}
@@ -60,7 +60,7 @@ export default async function AdminMessages({
                 </p>
               </div>
 
-              <a href={`mailto:${m.email}`} className="mt-1 inline-block text-sm text-gold">
+              <a href={`mailto:${m.email}`} className="mt-1 inline-block text-sm text-accent-text">
                 {m.email}
               </a>
 

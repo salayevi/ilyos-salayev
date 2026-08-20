@@ -274,7 +274,7 @@ export function OpeningSequence() {
             className="absolute inset-0"
             style={{
               background:
-                "radial-gradient(110% 80% at 50% 50%, rgb(5 6 7 / 0.35), rgb(5 6 7 / 0.82))",
+                "radial-gradient(110% 80% at 50% 50%, rgb(5 2 3 / 0.35), rgb(5 2 3 / 0.82))",
               opacity: phase === "idle" ? 1 : 0,
               transition: "opacity 900ms ease-out",
             }}
@@ -286,14 +286,14 @@ export function OpeningSequence() {
               <p className="mt-5 font-display text-[40px] leading-[1.05] tracking-[-0.03em] text-balance md:text-7xl">
                 Bu portfolio emas.
                 <br />
-                <span className="text-gold-300">Bu — sahna.</span>
+                <span className="text-crimson-100">Bu — sahna.</span>
               </p>
 
               <button
                 type="button"
                 onClick={start}
                 autoFocus
-                className="mt-10 inline-flex h-13 items-center rounded-full bg-gold px-8 text-[13px] font-medium tracking-[0.14em] text-void uppercase transition-colors hover:bg-gold-300"
+                className="mt-10 inline-flex h-13 items-center rounded-full bg-accent px-8 text-[13px] font-medium tracking-[0.14em] text-tp uppercase transition-colors hover:bg-accent-hover"
               >
                 Start experience
               </button>

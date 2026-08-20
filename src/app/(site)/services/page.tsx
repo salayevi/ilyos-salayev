@@ -39,11 +39,11 @@ export default async function ServicesPage() {
               <Reveal key={s.id} delay={i * 80}>
                 <article
                   className={`flex h-full flex-col rounded-[16px] border bg-s1 p-6 md:p-8 ${
-                    s.highlighted ? "border-gold" : "border-line"
+                    s.highlighted ? "border-accent" : "border-line"
                   }`}
                 >
                   {s.highlighted && (
-                    <p className="label mb-3 text-[10px] text-gold">Ko&apos;p tanlanadi</p>
+                    <p className="label mb-3 text-[10px] text-accent-text">Ko&apos;p tanlanadi</p>
                   )}
                   <div className="flex items-baseline justify-between gap-3">
                     <h2 className="text-2xl font-medium">{s.title}</h2>
@@ -51,7 +51,7 @@ export default async function ServicesPage() {
                   </div>
 
                   {price && (
-                    <p className="mt-4 font-display text-[38px] leading-none text-gold md:text-5xl">
+                    <p className="mt-4 font-display text-[38px] leading-none text-accent-text md:text-5xl">
                       {price}
                       {s.priceFrom && (
                         <span className="ml-2 align-middle font-sans text-xs text-tt">
@@ -67,7 +67,7 @@ export default async function ServicesPage() {
                     <ul className="mt-4 flex flex-col gap-2">
                       {s.features.map((f) => (
                         <li key={f} className="flex gap-2.5 text-sm text-ts">
-                          <span aria-hidden className="text-gold">
+                          <span aria-hidden className="text-accent-text">
                             &mdash;
                           </span>
                           {f}
@@ -85,7 +85,7 @@ export default async function ServicesPage() {
                       <summary
                         className={`flex h-11 w-full cursor-pointer list-none items-center justify-center rounded-lg text-sm font-medium transition-colors ${
                           s.highlighted
-                            ? "bg-gold text-void hover:bg-gold-300"
+                            ? "bg-accent text-tp hover:bg-accent-hover"
                             : "border border-line-2 hover:border-line-3 hover:bg-s2"
                         }`}
                       >
@@ -111,7 +111,7 @@ export default async function ServicesPage() {
 
         <p className="mt-8 text-[15px] text-ts md:mt-12">
           Yangi loyihaga vaqtingiz yo&apos;qmi?{" "}
-          <Link href="/tayyor-saytlar" className="text-gold hover:text-gold-300">
+          <Link href="/tayyor-saytlar" className="text-accent-text hover:text-crimson-100">
             Tayyor saytlarni ko&apos;ring &rarr;
           </Link>
         </p>
@@ -124,7 +124,7 @@ export default async function ServicesPage() {
         <ol className="mt-5 md:mt-7">
           {PROCESS.map((p, i) => (
             <li key={p.title} className="flex gap-4 border-b border-line py-4 md:gap-6 md:py-6">
-              <span className="pt-1 font-mono text-xs text-gold">
+              <span className="pt-1 font-mono text-xs text-accent-text">
                 {String(i + 1).padStart(2, "0")}
               </span>
               <div>

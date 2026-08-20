@@ -242,7 +242,7 @@ function PanelButton({ idle, busy }: { idle: string; busy: string }) {
     <button
       type="submit"
       disabled={pending}
-      className="inline-flex h-11 shrink-0 items-center justify-center rounded-lg border border-gold/50 px-5 text-sm font-medium text-gold transition-colors hover:bg-gold-900 disabled:opacity-50"
+      className="inline-flex h-11 shrink-0 items-center justify-center rounded-lg border border-line-accent px-5 text-sm font-medium text-accent-text transition-colors hover:bg-crimson-900 disabled:opacity-50"
     >
       {pending ? busy : idle}
     </button>

@@ -23,7 +23,7 @@ export function ProjectCard({
       href={`/work/${project.slug}`}
       className="group block rounded-[16px] focus-visible:outline-offset-4"
     >
-      <div className="relative overflow-hidden rounded-[16px] border border-transparent transition-colors duration-500 group-hover:border-gold/40">
+      <div className="relative overflow-hidden rounded-[16px] border border-transparent transition-colors duration-500 group-hover:border-line-accent">
         <MediaFrame
           tone={toneOf(project.tone)}
           src={project.previewImage || undefined}
@@ -99,7 +99,7 @@ export function ProjectTile({
           className="h-[220px] transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.03] md:h-[300px]"
         />
       </div>
-      <h3 className="mt-4 text-[22px] font-medium transition-colors group-hover:text-gold md:mt-5 md:text-2xl">
+      <h3 className="mt-4 text-[22px] font-medium transition-colors group-hover:text-accent-text md:mt-5 md:text-2xl">
         {project.title}
       </h3>
       <p className="mt-1.5 flex items-baseline justify-between gap-3 text-sm text-tt">

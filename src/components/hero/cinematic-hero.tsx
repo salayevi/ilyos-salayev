@@ -320,7 +320,7 @@ export function CinematicHero(content: BeatContent) {
           className="pointer-events-none absolute inset-0"
           style={{
             background:
-              "radial-gradient(120% 90% at 50% 40%, transparent 35%, rgb(5 6 7 / 0.62) 100%)",
+              "radial-gradient(120% 90% at 50% 40%, transparent 35%, rgb(5 2 3 / 0.62) 100%)",
           }}
         />
         <div
@@ -364,7 +364,7 @@ export function CinematicHero(content: BeatContent) {
             <div className="w-48 text-center">
               <div className="h-px w-full bg-line-2">
                 <div
-                  className="h-px bg-gold transition-[width] duration-300"
+                  className="h-px bg-accent transition-[width] duration-300"
                   style={{ width: `${Math.max(6, pct)}%` }}
                 />
               </div>
@@ -380,7 +380,7 @@ export function CinematicHero(content: BeatContent) {
         >
           <span className="label text-[10px]">Vaqtni siz boshqarasiz</span>
           <span aria-hidden className="h-10 w-px overflow-hidden bg-line-2">
-            <span className="block h-3 w-px animate-[cue_2.2s_ease-in-out_infinite] bg-gold" />
+            <span className="block h-3 w-px animate-[cue_2.2s_ease-in-out_infinite] bg-accent" />
           </span>
         </div>
 
@@ -389,13 +389,13 @@ export function CinematicHero(content: BeatContent) {
             000
           </span>
           <span aria-hidden className="hidden h-px w-24 bg-line-2 sm:block">
-            <span ref={barRef} className="block h-px bg-gold" style={{ width: "0%" }} />
+            <span ref={barRef} className="block h-px bg-accent" style={{ width: "0%" }} />
           </span>
           <button
             type="button"
             onClick={toggleSound}
             aria-pressed={soundOn}
-            className="inline-flex h-9 items-center rounded-full border border-line-2 bg-[rgb(5_6_7/0.5)] px-3.5 text-[11px] tracking-[0.08em] text-ts uppercase backdrop-blur transition-colors hover:border-gold hover:text-tp"
+            className="inline-flex h-9 items-center rounded-full border border-line-2 bg-[rgb(5_2_3/0.5)] px-3.5 text-[11px] tracking-[0.08em] text-ts uppercase backdrop-blur transition-colors hover:border-accent hover:text-tp"
           >
             {soundOn ? "Ovoz · scroll" : "Ovoz"}
           </button>

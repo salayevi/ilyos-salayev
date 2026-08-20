@@ -59,7 +59,7 @@ export default async function ContactPage() {
                       href={r.href}
                       target={r.href.startsWith("http") ? "_blank" : undefined}
                       rel={r.href.startsWith("http") ? "noreferrer noopener" : undefined}
-                      className="hover:text-gold"
+                      className="hover:text-accent-text"
                     >
                       {r.value}
                     </a>

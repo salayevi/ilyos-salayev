@@ -17,12 +17,25 @@ import {
   getTestimonials,
 } from "@/lib/queries";
 
-const STATS = [
-  { value: "12+", label: "Yetkazilgan loyiha" },
-  { value: "6 yil", label: "Muhandislik tajribasi" },
-  { value: "143", label: "Avtotest" },
-  { value: "99.9%", label: "Servis uptime" },
-];
+/**
+ * The band under "about" used to carry four hand-written figures — a project
+ * count, a years-of-experience claim, a test total and an uptime percentage.
+ * Three of the four were unverifiable and the first went stale the moment a
+ * project shipped, which is exactly the kind of number a buyer checks.
+ *
+ * Every figure here is now counted from the same rows the pages below render,
+ * so the band cannot disagree with the site it sits in, and it grows on its
+ * own as work is published. The last cell is a commitment rather than a
+ * measurement, and is written as one.
+ */
+function stats(counts: { projects: number; products: number; services: number }) {
+  return [
+    { value: String(counts.projects), label: "Chop etilgan loyiha", show: counts.projects > 0 },
+    { value: String(counts.products), label: "Sotuvdagi tayyor sayt", show: counts.products > 0 },
+    { value: String(counts.services), label: "Xizmat yo'nalishi", show: counts.services > 0 },
+    { value: "1 kun", label: "Javob muddati", show: true },
+  ].filter((n) => n.show);
+}
 
 export async function generateMetadata(): Promise<Metadata> {
   const s = await getSettings();
@@ -36,21 +49,37 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function HomePage() {
-  const s = await getSettings();
+  // One round trip rather than seven sequential ones. These reads do not depend
+  // on each other, and awaiting them in turn made the landing page wait out the
+  // sum of every query instead of the slowest one.
+  const [s, flagged, allProjects, services, testimonials, allPosts, allProducts] =
+    await Promise.all([
+      getSettings(),
+      getFeaturedProjects(),
+      getProjects({ onlyPublished: true }),
+      getServices({ onlyPublished: true }),
+      getTestimonials(),
+      getPosts({ onlyPublished: true }),
+      getProducts({ onlyPublished: true }),
+    ]);
+
   // Flagged work first, but a single featured item would leave a two-column
   // grid half empty — so fall back to published work until there are enough.
-  const flagged = await getFeaturedProjects();
-  const featured =
-    flagged.length >= 2 ? flagged : (await getProjects({ onlyPublished: true })).slice(0, 3);
-  const services = await getServices({ onlyPublished: true });
-  const [testimonial] = await getTestimonials();
-  const posts = (await getPosts({ onlyPublished: true })).slice(0, 3);
+  const featured = flagged.length >= 2 ? flagged : allProjects.slice(0, 3);
+  const [testimonial] = testimonials;
+  const posts = allPosts.slice(0, 3);
   // Featured listings first; if none are flagged, still show what is for sale.
-  const store = (await getProducts({ onlyPublished: true })).filter((p) => p.status !== "sold");
+  const store = allProducts.filter((p) => p.status !== "sold");
   const forSale = (store.some((p) => p.featured) ? store.filter((p) => p.featured) : store).slice(
     0,
     3,
   );
+
+  const counts = stats({
+    projects: allProjects.length,
+    products: allProducts.length,
+    services: services.length,
+  });
 
   return (
     <>
@@ -88,7 +117,7 @@ export default async function HomePage() {
         <Reveal>
           <div className="flex items-baseline justify-between gap-6 border-b border-line pb-5">
             <h2 className="label text-[10px] md:text-xs">01 / Ishlangan ishlar</h2>
-            <Link href="/work" className="text-[13px] text-gold hover:text-gold-300 md:text-[15px]">
+            <Link href="/work" className="text-[13px] text-accent-text hover:text-crimson-100 md:text-[15px]">
               Barchasini ko&apos;rish &rarr;
             </Link>
           </div>
@@ -122,7 +151,7 @@ export default async function HomePage() {
               <h2 className="label text-[10px] md:text-xs">02 / Tayyor saytlar</h2>
               <Link
                 href="/tayyor-saytlar"
-                className="text-[13px] text-gold hover:text-gold-300 md:text-[15px]"
+                className="text-[13px] text-accent-text hover:text-crimson-100 md:text-[15px]"
               >
                 Do&apos;konga o&apos;tish &rarr;
               </Link>
@@ -152,7 +181,7 @@ export default async function HomePage() {
             {services.map((c, i) => (
               <Reveal key={c.id} delay={i * 80}>
                 <article className="h-full rounded-[16px] border border-line bg-s1 p-6 md:p-10">
-                  <p className="font-mono text-xs text-gold">
+                  <p className="font-mono text-xs text-accent-text">
                     {String(i + 1).padStart(2, "0")}
                   </p>
                   <h3 className="mt-3.5 text-xl font-medium md:mt-5 md:text-2xl">{c.title}</h3>
@@ -192,7 +221,7 @@ export default async function HomePage() {
             </p>
             <Link
               href="/about"
-              className="mt-6 inline-flex items-center gap-2 text-[15px] text-gold transition-colors hover:text-gold-300 md:mt-8"
+              className="mt-6 inline-flex items-center gap-2 text-[15px] text-accent-text transition-colors hover:text-crimson-100 md:mt-8"
             >
               To&apos;liq hikoya <span aria-hidden>&rarr;</span>
             </Link>
@@ -200,16 +229,14 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* ---------------- numbers ---------------- */}
-      <section className="mt-16 grid grid-cols-2 border-y border-line md:mt-35 md:grid-cols-4">
-        {STATS.map((n, i) => (
-          <div
-            key={n.label}
-            className={`px-5 py-7 md:px-10 md:py-14 ${i < 3 ? "md:border-r md:border-line" : ""} ${
-              i % 2 === 0 ? "border-r border-line md:border-r" : ""
-            } ${i < 2 ? "border-b border-line md:border-b-0" : ""}`}
-          >
-            <p className="font-display text-[40px] text-gold md:text-6xl">{n.value}</p>
+      {/* ---------------- numbers ----------------
+          The cell count is data-dependent now, so the dividers are drawn with
+          a gap-coloured grid rather than per-cell border classes keyed to
+          position — one rule that holds for two cells or for four. */}
+      <section className="mt-16 grid grid-cols-2 gap-px border-y border-line bg-line md:mt-35 md:grid-cols-4">
+        {counts.map((n) => (
+          <div key={n.label} className="bg-void px-5 py-7 md:px-10 md:py-14">
+            <p className="font-display text-[40px] text-accent-text md:text-6xl">{n.value}</p>
             <p className="label mt-1.5 text-[10px] md:mt-2.5 md:text-xs">{n.label}</p>
           </div>
         ))}
@@ -238,7 +265,7 @@ export default async function HomePage() {
               <h2 className="label text-[10px] md:text-xs">05 / Jurnal</h2>
               <Link
                 href="/journal"
-                className="text-[13px] text-gold hover:text-gold-300 md:text-[15px]"
+                className="text-[13px] text-accent-text hover:text-crimson-100 md:text-[15px]"
               >
                 Barcha yozuvlar &rarr;
               </Link>
@@ -268,7 +295,7 @@ export default async function HomePage() {
       <StageAnchor name="resolve" />
 
       {/* ---------------- contact ---------------- */}
-      <div aria-hidden className="gold-rule" />
+      <div aria-hidden className="accent-rule" />
       <section className="relative overflow-hidden px-5 py-16 text-center md:px-10 md:py-37">
         <div
           aria-hidden
@@ -286,7 +313,7 @@ export default async function HomePage() {
           <div className="mt-7 flex flex-col items-center justify-center gap-3 md:mt-11 md:flex-row md:gap-4">
             <Link
               href="/contact"
-              className="inline-flex h-12 w-full max-w-xs items-center justify-center rounded-lg bg-gold px-7 text-[15px] font-medium text-void transition-colors hover:bg-gold-300 md:w-auto"
+              className="inline-flex h-12 w-full max-w-xs items-center justify-center rounded-lg bg-accent px-7 text-[15px] font-medium text-tp transition-colors hover:bg-accent-hover md:w-auto"
             >
               Suhbatni boshlash
             </Link>

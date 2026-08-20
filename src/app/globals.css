@@ -1,55 +1,86 @@
 @import "tailwindcss";
 
 /* ============================================================
-   OBSIDIAN — design tokens
-   Dark-primary. Hierarchy comes from luminance, not decoration.
-   Contrast measured against --color-void (#050607):
-     text-primary   18.2:1   AAA
-     text-secondary  9.2:1   AAA
-     text-tertiary   4.9:1   AA
+   IS DRAGON — design tokens
+   Black x crimson, taken off the dragon service mark. Depth comes from five
+   near-black steps, never flat #000, and one chromatic accent carries the
+   whole identity.
+
+   Contrast is measured against the surface each token is ACTUALLY used on.
+   Most text sits on `s1`/`s2` cards, which are lighter than the page, so
+   measuring against `void` alone would pass tokens that fail in place:
+     --color-tp   18.4:1 void / 17.7 s1   AAA, any size
+     --color-ts    9.1:1 void /  8.8 s1   AAA, any size
+     --color-tt    5.2:1 void /  5.0 s1   AA,  any size
+     --color-tm    4.0:1  — never under 24px. aria-hidden glyphs and large
+                            display type only; small metadata uses `tt`.
+     --color-td    2.3:1  — never live text. Inactive controls (WCAG 1.4.3
+                            exempts those) and pure decoration.
+
+   The crimson ramp splits by job, and the split is load-bearing:
+     --color-crimson      #b01d36  3.0:1 — FILLS AND BORDERS ONLY. At 30px it
+                                   measures 2.91 on s1, under the 3.0 large-text
+                                   floor, so it is never type at any size.
+     --color-crimson-300  #d63a50  4.5 on void but 4.13 on s3 — passes AA only
+                                   on the page itself, so it is a border / focus
+                                   / highlight swatch, not a text colour.
+     --color-crimson-200  #e05266  5.0:1 on every surface in the ramp — the one
+                                   crimson permitted as text. `--color-accent-text`
+                                   resolves here so call sites cannot get it wrong.
+   Light text on a crimson fill (#f2eeee on #b01d36) is 6.2:1, so accent buttons
+   take LIGHT labels, never dark ones.
    ============================================================ */
 
 @theme {
   /* surfaces */
-  --color-void: #050607;
-  --color-base: #0a0c0f;
-  --color-s1: #101317;
-  --color-s2: #171b21;
-  --color-s3: #1f242b;
-  --color-raised: #262c34;
+  --color-void: #050203;
+  --color-base: #090506;
+  --color-s1: #0d0809;
+  --color-s2: #130b0d;
+  --color-s3: #1a0d11;
+  --color-raised: #221316;
 
-  /* borders */
-  --color-line: #1c2128;
-  --color-line-2: #262d36;
-  --color-line-3: #38414d;
+  /* borders — near-white at low alpha for structure, crimson for emphasis */
+  --color-line: rgb(242 238 238 / 0.06);
+  --color-line-2: rgb(242 238 238 / 0.1);
+  --color-line-3: rgb(214 58 80 / 0.18);
+  --color-line-accent: rgb(214 58 80 / 0.38);
 
   /* text */
-  --color-tp: #f4f6f8;
-  --color-ts: #a8b1bc;
-  --color-tt: #757f8c;
-  --color-td: #454d57;
+  --color-tp: #f2eeee;
+  --color-ts: #b6aaad;
+  --color-tt: #8a7c80;
+  --color-tm: #776b6e;
+  --color-td: #504649;
 
-  /* accent — gold */
-  --color-gold-100: #f5e6c8;
-  --color-gold-300: #e3c48a;
-  --color-gold: #c8a96a;
-  --color-gold-700: #8f7440;
-  --color-gold-900: #4a3b1f;
+  /* dragon crimson — the signature accent, taken off the logo */
+  --color-crimson-100: #f5c9d0;
+  --color-crimson-200: #e05266;
+  --color-crimson-300: #d63a50;
+  --color-crimson-500: #c3263e;
+  --color-crimson: #b01d36;
+  --color-crimson-700: #991b30;
+  --color-crimson-900: #4a0d18;
 
-  /* secondary — azure (cold light) */
-  --color-azure-300: #9ec5ff;
-  --color-azure: #4a8fe7;
-  --color-azure-700: #2a5b99;
+  /*
+    Semantic accents. Components reference these rather than the raw ramp, so
+    the "which crimson is legal here" question is answered once, in this file,
+    instead of at every call site.
+  */
+  --color-accent: var(--color-crimson);
+  --color-accent-hover: var(--color-crimson-500);
+  --color-accent-active: var(--color-crimson-700);
+  --color-accent-text: var(--color-crimson-200);
 
-  /* status */
-  --color-ok: #4ade80;
-  --color-ok-bg: #0f2a1a;
-  --color-warn: #fbbf24;
-  --color-warn-bg: #2a2010;
-  --color-bad: #f87171;
-  --color-bad-bg: #2e1416;
-  --color-info: #60a5fa;
-  --color-info-bg: #0f1e33;
+  /* status — desaturated so they sit inside the near-black environment */
+  --color-ok: #54c98b;
+  --color-ok-bg: #0b1f16;
+  --color-warn: #d9a441;
+  --color-warn-bg: #1f1608;
+  --color-bad: #e05561;
+  --color-bad-bg: #250d11;
+  --color-info: #7d94c4;
+  --color-info-bg: #0e1220;
 
   /* type */
   --font-display: var(--font-instrument-serif), Didot, Georgia, serif;
@@ -78,11 +109,11 @@
     overflow-x: hidden;
   }
   ::selection {
-    background: var(--color-gold);
-    color: var(--color-void);
+    background: var(--color-crimson);
+    color: var(--color-tp);
   }
   :focus-visible {
-    outline: 2px solid var(--color-gold);
+    outline: 2px solid var(--color-crimson-300);
     outline-offset: 3px;
     border-radius: 2px;
   }
@@ -102,12 +133,12 @@
     letter-spacing: 0.08em;
     color: var(--color-tt);
   }
-  .gold-rule {
+  .accent-rule {
     height: 1px;
-    background: linear-gradient(90deg, transparent, var(--color-gold), transparent);
+    background: linear-gradient(90deg, transparent, var(--color-crimson), transparent);
   }
   .glass {
-    background: rgb(23 27 33 / 0.72);
+    background: rgb(19 11 13 / 0.72);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
   }
@@ -127,14 +158,14 @@
   top: 0;
   left: 50%;
   transform: translateX(-50%);
-  background: linear-gradient(180deg, rgb(158 197 255 / 0.16), rgb(158 197 255 / 0) 70%);
+  background: linear-gradient(180deg, rgb(214 58 80 / 0.14), rgb(214 58 80 / 0) 70%);
   filter: blur(46px);
   pointer-events: none;
 }
 .pool {
   position: absolute;
   border-radius: 50%;
-  background: radial-gradient(circle, rgb(200 169 106 / 0.2), transparent 65%);
+  background: radial-gradient(circle, rgb(176 29 54 / 0.22), transparent 65%);
   filter: blur(40px);
   pointer-events: none;
 }
@@ -177,7 +208,7 @@
   inset-inline: 0;
   bottom: -6px;
   height: 1px;
-  background: var(--color-gold);
+  background: var(--color-crimson);
   transform: scaleX(0);
   transform-origin: left;
   transition: transform 0.45s var(--ease-cinematic);

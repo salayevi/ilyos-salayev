@@ -11,7 +11,7 @@ export default async function AdminServices() {
         <h1 className="font-display text-4xl tracking-[-0.02em] md:text-5xl">Xizmatlar</h1>
         <Link
           href="/admin/services/new"
-          className="inline-flex h-11 items-center rounded-lg bg-gold px-5 text-sm font-medium text-void transition-colors hover:bg-gold-300"
+          className="inline-flex h-11 items-center rounded-lg bg-accent px-5 text-sm font-medium text-tp transition-colors hover:bg-accent-hover"
         >
           Yangi xizmat
         </Link>
@@ -31,7 +31,7 @@ export default async function AdminServices() {
                   <p className="flex items-center gap-2 font-medium">
                     {s.title}
                     {s.highlighted && (
-                      <span className="rounded bg-gold-900 px-1.5 py-0.5 text-[10px] text-gold-100">
+                      <span className="rounded bg-crimson-900 px-1.5 py-0.5 text-[10px] text-crimson-100">
                         ko&apos;p tanlanadi
                       </span>
                     )}

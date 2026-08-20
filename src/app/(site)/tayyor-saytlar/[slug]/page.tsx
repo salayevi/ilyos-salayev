@@ -58,7 +58,7 @@ export default async function ProductPage({ params }: Params) {
 
         <div className="shrink-0">
           {price ? (
-            <p className="font-display text-[44px] leading-none text-gold md:text-6xl">{price}</p>
+            <p className="font-display text-[44px] leading-none text-accent-text md:text-6xl">{price}</p>
           ) : (
             <p className="text-lg text-ts">Narx kelishiladi</p>
           )}
@@ -116,7 +116,7 @@ export default async function ProductPage({ params }: Params) {
                 <ul className="mt-4 grid gap-2.5 md:mt-6 md:grid-cols-2">
                   {product.includes.map((item) => (
                     <li key={item} className="flex gap-2.5 text-[15px] text-ts md:text-base">
-                      <span aria-hidden className="text-gold">
+                      <span aria-hidden className="text-accent-text">
                         &mdash;
                       </span>
                       {item}
@@ -154,7 +154,7 @@ export default async function ProductPage({ params }: Params) {
               </p>
               <Link
                 href="/contact"
-                className="mt-5 inline-flex h-11 items-center rounded-lg bg-gold px-5 text-sm font-medium text-void transition-colors hover:bg-gold-300"
+                className="mt-5 inline-flex h-11 items-center rounded-lg bg-accent px-5 text-sm font-medium text-tp transition-colors hover:bg-accent-hover"
               >
                 Bog&apos;lanish
               </Link>
@@ -179,10 +179,10 @@ export default async function ProductPage({ params }: Params) {
               <li key={p.id}>
                 <Link
                   href={`/tayyor-saytlar/${p.slug}`}
-                  className="flex h-full flex-col justify-between gap-4 rounded-[12px] border border-line bg-s1 p-5 transition-colors hover:border-gold/40"
+                  className="flex h-full flex-col justify-between gap-4 rounded-[12px] border border-line bg-s1 p-5 transition-colors hover:border-line-accent"
                 >
                   <span className="text-[17px] font-medium">{p.title}</span>
-                  <span className="font-mono text-sm text-gold">
+                  <span className="font-mono text-sm text-accent-text">
                     {formatMoney(p.price, p.currency) ?? "Kelishiladi"}
                   </span>
                 </Link>

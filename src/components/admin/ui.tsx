@@ -3,10 +3,10 @@
 import { useFormStatus } from "react-dom";
 
 export const inputCls =
-  "h-11 w-full rounded-lg border border-line-2 bg-s2 px-3.5 text-[15px] text-tp placeholder:text-tt focus:border-gold focus:outline-none";
+  "h-11 w-full rounded-lg border border-line-2 bg-s2 px-3.5 text-[15px] text-tp placeholder:text-tt focus:border-accent focus:outline-none";
 
 export const areaCls =
-  "w-full rounded-lg border border-line-2 bg-s2 p-3.5 text-[15px] leading-[1.6] text-tp placeholder:text-tt focus:border-gold focus:outline-none";
+  "w-full rounded-lg border border-line-2 bg-s2 p-3.5 text-[15px] leading-[1.6] text-tp placeholder:text-tt focus:border-accent focus:outline-none";
 
 export function Field({
   label,
@@ -54,7 +54,7 @@ export function Toggle({
         type="checkbox"
         name={name}
         defaultChecked={defaultChecked}
-        className="size-4 accent-[var(--color-gold)]"
+        className="size-4 accent-[var(--color-crimson)]"
       />
       <span className="text-sm">{label}</span>
     </label>
@@ -68,7 +68,7 @@ export function SaveBar({ ok, error }: { ok?: boolean; error?: string }) {
       <button
         type="submit"
         disabled={pending}
-        className="inline-flex h-11 items-center rounded-lg bg-gold px-6 text-sm font-medium text-void transition-colors hover:bg-gold-300 disabled:bg-s3 disabled:text-td"
+        className="inline-flex h-11 items-center rounded-lg bg-accent px-6 text-sm font-medium text-tp transition-colors hover:bg-accent-hover disabled:bg-s3 disabled:text-td"
       >
         {pending ? "Saqlanmoqda…" : "Saqlash"}
       </button>

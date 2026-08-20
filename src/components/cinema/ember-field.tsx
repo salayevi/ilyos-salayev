@@ -12,7 +12,7 @@ import { useReducedMotion } from "./use-reduced-motion";
  *
  * The brief asked for a dragon that is never actually in the room: warmth,
  * embers, the sense that something further in is giving off heat. So this is
- * a few dozen slow motes of gold and ember over the whole frame, brightest as
+ * a few dozen slow motes of ash and ember over the whole frame, brightest as
  * the door opens and fading back as the visitor settles into reading.
  *
  * Two decisions keep it from costing anything:
@@ -74,8 +74,8 @@ export function EmberField() {
     const nav = navigator as Navigator & { deviceMemory?: number };
     const lean = (nav.deviceMemory ?? 8) <= 4;
 
-    const gold = makeSprite(64, "rgba(245,230,200,0.8)", "rgba(200,169,106,0.2)");
-    const ember = makeSprite(64, "rgba(255,190,140,0.72)", "rgba(196,86,44,0.17)");
+    const dust = makeSprite(64, "rgba(245,201,208,0.72)", "rgba(214,58,80,0.20)");
+    const ember = makeSprite(64, "rgba(255,150,160,0.7)", "rgba(176,29,54,0.18)");
 
     let width = 0;
     let height = 0;
@@ -89,7 +89,7 @@ export function EmberField() {
       e.sway = 6 + Math.random() * 16;
       e.phase = Math.random() * Math.PI * 2;
       e.alpha = 0.12 + Math.random() * 0.3;
-      // Mostly gold dust with the occasional live ember, so the warmth reads
+      // Mostly cool ash with the occasional live ember, so the glow reads
       // as firelight rather than as a particle effect.
       e.warm = Math.random() < 0.24 ? 1 : 0;
     };
@@ -168,7 +168,7 @@ export function EmberField() {
         const flicker = 0.78 + 0.22 * Math.sin(e.phase * 2.3);
         const size = e.radius * 8;
         ctx.globalAlpha = clamp01(e.alpha * heat * pulse * flicker);
-        ctx.drawImage(e.warm ? ember : gold, x - size / 2, e.y - size / 2, size, size);
+        ctx.drawImage(e.warm ? ember : dust, x - size / 2, e.y - size / 2, size, size);
       }
 
       ctx.globalAlpha = 1;

@@ -34,7 +34,7 @@ export default async function PostPage({ params }: Params) {
         <span>{post.readMinutes} daqiqalik o&apos;qish</span>
       </p>
 
-      <div aria-hidden className="gold-rule mt-7 md:mt-9" />
+      <div aria-hidden className="accent-rule mt-7 md:mt-9" />
 
       <div className="mt-7 md:mt-9">
         {post.body.split("\n\n").map((para, i) => (

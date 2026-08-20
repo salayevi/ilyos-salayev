@@ -236,6 +236,10 @@ const SETTING_FALLBACKS: SiteSettings = {
   github: "",
   linkedin: "",
   location: "Toshkent",
+  // Whole USD. The plan *structure* is code, but the two starting figures move
+  // with the market, so they are editable from the panel without a deploy.
+  planDogPrice: "500",
+  planWolfPrice: "1500",
 };
 
 export async function getSettings(): Promise<SiteSettings> {

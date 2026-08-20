@@ -173,6 +173,9 @@ export const settingsSchema = z.object({
   github: z.string().trim().max(120).default(""),
   linkedin: z.string().trim().max(120).default(""),
   location: z.string().trim().max(80).default(""),
+  /** Whole USD floors for the two priced tiers. Dragon is quoted, not listed. */
+  planDogPrice: money,
+  planWolfPrice: money,
 });
 
 export type ProjectInput = z.infer<typeof projectSchema>;

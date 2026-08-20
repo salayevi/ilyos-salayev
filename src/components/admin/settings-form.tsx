@@ -105,6 +105,38 @@ export function SettingsForm({ settings: s }: { settings: SiteSettings }) {
       </Field>
 
       <hr className="my-8 border-line" />
+      <h2 className="label text-[10px]">Tariflar</h2>
+      <p className="mt-2 text-[13px] text-tt">
+        Dog va Wolf uchun eng past chegara, to&apos;liq dollarda. Dragon kartada raqam
+        ko&apos;rsatmaydi — u har doim suhbatdan keyin baholanadi.
+      </p>
+
+      <div className="mt-3 grid gap-5 md:grid-cols-2">
+        <Field label="Dog — dan boshlab ($)" htmlFor="planDogPrice" error={err?.planDogPrice}>
+          <input
+            id="planDogPrice"
+            name="planDogPrice"
+            type="number"
+            min={0}
+            step={50}
+            defaultValue={s.planDogPrice}
+            className={inputCls}
+          />
+        </Field>
+        <Field label="Wolf — dan boshlab ($)" htmlFor="planWolfPrice" error={err?.planWolfPrice}>
+          <input
+            id="planWolfPrice"
+            name="planWolfPrice"
+            type="number"
+            min={0}
+            step={50}
+            defaultValue={s.planWolfPrice}
+            className={inputCls}
+          />
+        </Field>
+      </div>
+
+      <hr className="my-8 border-line" />
       <h2 className="label text-[10px]">Aloqa</h2>
 
       <div className="mt-3 grid gap-5 md:grid-cols-2">
