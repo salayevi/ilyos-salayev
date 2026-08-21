@@ -77,7 +77,10 @@ export default async function HomePage() {
 
   const counts = stats({
     projects: allProjects.length,
-    products: allProducts.length,
+    // `store`, not `allProducts`: the cell is labelled "sotuvdagi" and the
+    // section below renders the same filtered list. Counting sold listings
+    // here would have the band claim three for sale above a grid showing two.
+    products: store.length,
     services: services.length,
   });
 
