@@ -30,7 +30,7 @@ export function WorkFilter({ projects }: { projects: ProjectView[] }) {
                 aria-pressed={on}
                 className={`shrink-0 rounded-full border px-4 py-2 text-[13px] transition-colors md:rounded md:px-4.5 md:text-sm ${
                   on
-                    ? "border-gold bg-gold text-void"
+                    ? "border-accent bg-accent text-tp"
                     : "border-line-2 text-ts hover:border-line-3 hover:text-tp"
                 }`}
               >

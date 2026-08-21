@@ -71,7 +71,7 @@ export default async function CaseStudyPage({ params }: Params) {
                 href={project.liveUrl}
                 target="_blank"
                 rel="noreferrer noopener"
-                className="inline-flex h-11 items-center rounded-lg bg-gold px-5 text-sm font-medium text-void transition-colors hover:bg-gold-300"
+                className="inline-flex h-11 items-center rounded-lg bg-accent px-5 text-sm font-medium text-tp transition-colors hover:bg-accent-hover"
               >
                 Saytga o&apos;tish &rarr;
               </a>
@@ -114,7 +114,7 @@ export default async function CaseStudyPage({ params }: Params) {
             {sections.map((s, i) => (
               <li
                 key={s.key}
-                className={i === 0 ? "border-l-2 border-gold pl-4 text-tp" : "pl-4.5"}
+                className={i === 0 ? "border-l-2 border-accent pl-4 text-tp" : "pl-4.5"}
               >
                 <a href={`#${s.key}`} className="hover:text-tp">
                   {s.label}
@@ -173,7 +173,7 @@ export default async function CaseStudyPage({ params }: Params) {
                       key={m.label}
                       className="rounded-[12px] border border-line bg-s1 p-5 md:p-8"
                     >
-                      <p className="font-display text-[40px] text-gold md:text-[52px]">{m.value}</p>
+                      <p className="font-display text-[40px] text-accent-text md:text-[52px]">{m.value}</p>
                       <p className="label mt-1.5 text-[10px] md:mt-2.5 md:text-[11px]">{m.label}</p>
                     </div>
                   ))}
@@ -191,7 +191,7 @@ export default async function CaseStudyPage({ params }: Params) {
                 href={project.liveUrl}
                 target="_blank"
                 rel="noreferrer noopener"
-                className="mt-8 flex items-center justify-between gap-4 rounded-[12px] border border-line bg-s1 p-5 transition-colors hover:border-gold/40 md:mt-14 md:p-6"
+                className="mt-8 flex items-center justify-between gap-4 rounded-[12px] border border-line bg-s1 p-5 transition-colors hover:border-line-accent md:mt-14 md:p-6"
               >
                 <div className="min-w-0">
                   <p className="label text-[10px]">Jonli sayt</p>
@@ -199,7 +199,7 @@ export default async function CaseStudyPage({ params }: Params) {
                     {hostOf(project.liveUrl)}
                   </p>
                 </div>
-                <span aria-hidden className="shrink-0 text-gold">
+                <span aria-hidden className="shrink-0 text-accent-text">
                   &rarr;
                 </span>
               </a>

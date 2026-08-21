@@ -130,12 +130,18 @@ export function ProjectForm({ project }: { project?: ProjectView }) {
             />
           </Field>
 
-          <Field label="Rang" htmlFor="tone" error={state.fieldErrors?.tone}>
+          {/*
+            Only ever seen when a project has no screenshot yet: it picks which
+            corner the crimson light falls from on the placeholder card. The
+            stored values are historical colour names — they key a gradient, not
+            a brand colour, so renaming them would be a migration for nothing.
+          */}
+          <Field label="Yoritish" htmlFor="tone" error={state.fieldErrors?.tone}>
             <select id="tone" name="tone" defaultValue={project?.tone ?? "gold"} className={inputCls}>
-              <option value="gold">Oltin</option>
-              <option value="azure">Moviy</option>
-              <option value="green">Yashil</option>
-              <option value="violet">Binafsha</option>
+              <option value="gold">Chapdan yorug&apos;</option>
+              <option value="azure">O&apos;ngdan to&apos;q</option>
+              <option value="green">Markazdan chuqur</option>
+              <option value="violet">O&apos;ngdan yumshoq</option>
             </select>
           </Field>
 

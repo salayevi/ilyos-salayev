@@ -13,6 +13,8 @@ import { importFromUrl, type ImportedSource } from "@/lib/sources";
 import {
   orderStatusSchema,
   integrationsSchema,
+  leadNotesSchema,
+  leadStatusSchema,
   postSchema,
   productSchema,
   projectSchema,
@@ -409,6 +411,43 @@ export async function deleteMessage(formData: FormData) {
   const id = rowId(formData);
   if (id === null) return;
   await db.delete(messages).where(eq(messages.id, id));
+  revalidatePath("/admin/messages", "page");
+}
+
+/**
+ * Moves an enquiry along the pipeline.
+ *
+ * Advancing past "new" implies it has been looked at, so the read flag follows
+ * automatically — otherwise the unread badge keeps counting leads that are
+ * already in negotiation, and a badge that lies gets ignored.
+ */
+export async function setLeadStatus(formData: FormData) {
+  await requireAdmin();
+  const parsed = leadStatusSchema.safeParse({
+    id: formData.get("id"),
+    status: formData.get("status"),
+  });
+  if (!parsed.success) return;
+
+  await db
+    .update(messages)
+    .set({ status: parsed.data.status, read: parsed.data.status !== "new" ? true : undefined })
+    .where(eq(messages.id, parsed.data.id));
+  revalidatePath("/admin/messages", "page");
+}
+
+export async function saveLeadNotes(formData: FormData) {
+  await requireAdmin();
+  const parsed = leadNotesSchema.safeParse({
+    id: formData.get("id"),
+    notes: formData.get("notes"),
+  });
+  if (!parsed.success) return;
+
+  await db
+    .update(messages)
+    .set({ notes: parsed.data.notes })
+    .where(eq(messages.id, parsed.data.id));
   revalidatePath("/admin/messages", "page");
 }
 

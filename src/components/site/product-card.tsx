@@ -25,7 +25,7 @@ export function ProductCard({
   return (
     <article
       className={`group flex h-full flex-col overflow-hidden rounded-[16px] border bg-s1 transition-colors ${
-        sold ? "border-line opacity-70" : "border-line hover:border-gold/40"
+        sold ? "border-line opacity-70" : "border-line hover:border-line-accent"
       }`}
     >
       <Link href={`/tayyor-saytlar/${product.slug}`} className="block">
@@ -63,7 +63,7 @@ export function ProductCard({
         </div>
 
         <h3 className="mt-3 text-xl font-medium md:text-2xl">
-          <Link href={`/tayyor-saytlar/${product.slug}`} className="hover:text-gold">
+          <Link href={`/tayyor-saytlar/${product.slug}`} className="hover:text-accent-text">
             {product.title}
           </Link>
         </h3>
@@ -85,7 +85,7 @@ export function ProductCard({
         <div className="mt-auto flex items-end justify-between gap-3 pt-5">
           <div>
             {price ? (
-              <p className="font-display text-3xl text-gold md:text-4xl">{price}</p>
+              <p className="font-display text-3xl text-accent-text md:text-4xl">{price}</p>
             ) : (
               <p className="text-[15px] text-ts">Narx kelishiladi</p>
             )}

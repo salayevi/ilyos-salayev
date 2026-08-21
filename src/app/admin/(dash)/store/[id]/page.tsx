@@ -21,7 +21,7 @@ export default async function EditProduct({ params }: { params: Promise<{ id: st
         <Link
           href={`/tayyor-saytlar/${product.slug}`}
           target="_blank"
-          className="text-[13px] text-gold hover:text-gold-300"
+          className="text-[13px] text-accent-text hover:text-crimson-100"
         >
           Saytda ko&apos;rish &rarr;
         </Link>

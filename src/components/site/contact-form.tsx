@@ -4,8 +4,20 @@ import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 
 import { submitMessage, type ContactState } from "@/lib/actions/contact";
+import {
+  BUDGETS,
+  CONTACT_METHODS,
+  SERVICES,
+  TIERS,
+  TIMELINES,
+  tierLabel,
+  type Choice,
+} from "@/lib/leads";
 
 const INITIAL: ContactState = { status: "idle" };
+
+const inputCls =
+  "h-12 w-full rounded-lg border border-line-2 bg-s2 px-4 text-[15px] text-tp placeholder:text-tt focus:border-accent focus:outline-none";
 
 function Submit() {
   const { pending } = useFormStatus();
@@ -13,7 +25,7 @@ function Submit() {
     <button
       type="submit"
       disabled={pending}
-      className="mt-5 flex h-12.5 w-full items-center justify-center rounded-lg bg-gold text-[15px] font-medium text-void transition-colors hover:bg-gold-300 disabled:bg-s3 disabled:text-td md:w-55"
+      className="mt-5 flex h-12.5 w-full items-center justify-center rounded-lg bg-accent text-[15px] font-medium text-tp transition-colors hover:bg-accent-hover disabled:bg-s3 disabled:text-td md:w-55"
     >
       {pending ? "Yuborilmoqda…" : "Yuborish"}
     </button>
@@ -46,8 +58,53 @@ function Field({
   );
 }
 
-export function ContactForm() {
+function Select({
+  id,
+  label,
+  options,
+  placeholder,
+  defaultValue,
+}: {
+  id: string;
+  label: string;
+  options: Choice[];
+  placeholder: string;
+  defaultValue?: string;
+}) {
+  return (
+    <Field id={id} label={label}>
+      <select id={id} name={id} defaultValue={defaultValue ?? ""} className={inputCls}>
+        <option value="">{placeholder}</option>
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+    </Field>
+  );
+}
+
+/**
+ * The project enquiry.
+ *
+ * Three fields are required and nothing else is. The rest sits behind one
+ * disclosure, because the alternative — eleven fields on first paint — reads as
+ * a form to fill in rather than a conversation to start, and the people most
+ * worth hearing from are the ones least willing to fill in a form.
+ *
+ * The trade the disclosure makes is deliberate: a reply to "I want a website"
+ * costs a round trip to ask about scope, budget and date. Anyone who opens the
+ * block saves that round trip, and anyone who does not is no worse off than
+ * they were with the old three-field version.
+ *
+ * `defaultTier` arrives from a plan card on /pricing. When it is set the block
+ * starts open and the tier is preselected — the visitor already made that
+ * choice one page ago, and hiding it would ask them to make it twice.
+ */
+export function ContactForm({ defaultTier = "" }: { defaultTier?: string }) {
   const [state, action] = useActionState(submitMessage, INITIAL);
+  const cameFromPricing = TIERS.some((t) => t.value === defaultTier);
 
   if (state.status === "success") {
     return (
@@ -65,9 +122,6 @@ export function ContactForm() {
       </div>
     );
   }
-
-  const inputCls =
-    "h-12 w-full rounded-lg border border-line-2 bg-s2 px-4 text-[15px] text-tp placeholder:text-tt focus:border-gold focus:outline-none";
 
   return (
     <form action={action} noValidate className="rounded-[16px] border border-line bg-s1 p-5 md:p-10">
@@ -111,12 +165,85 @@ export function ContactForm() {
             placeholder="Nima qurmoqchisiz va qachonga kerak?"
             aria-invalid={Boolean(state.errors?.body)}
             aria-describedby={state.errors?.body ? "body-error" : undefined}
-            className={`w-full rounded-lg border border-line-2 bg-s2 p-4 text-[15px] leading-[1.6] text-tp placeholder:text-tt focus:border-gold focus:outline-none ${
+            className={`w-full rounded-lg border border-line-2 bg-s2 p-4 text-[15px] leading-[1.6] text-tp placeholder:text-tt focus:border-accent focus:outline-none ${
               state.errors?.body ? "border-bad" : ""
             }`}
           />
         </Field>
       </div>
+
+      {/*
+        Native disclosure rather than a state toggle: it works before hydration,
+        the summary is already a focusable control with the right role, and the
+        open state survives a failed submission without being tracked.
+      */}
+      <details open={cameFromPricing} className="group mt-5 md:mt-6">
+        <summary className="flex cursor-pointer list-none items-center gap-2.5 rounded-lg border border-line-2 px-4 py-3 text-[14px] text-ts transition-colors hover:border-line-3 hover:text-tp [&::-webkit-details-marker]:hidden">
+          <span
+            aria-hidden
+            className="text-accent-text transition-transform duration-300 group-open:rotate-45"
+          >
+            +
+          </span>
+          Loyiha tafsilotlari
+          <span className="ml-auto text-[12px] text-tt">
+            {cameFromPricing ? tierLabel(defaultTier) : "ixtiyoriy"}
+          </span>
+        </summary>
+
+        <div className="mt-4 flex flex-col gap-5 md:gap-6">
+          <p className="text-[13px] leading-[1.6] text-tt">
+            Bularni to&apos;ldirsangiz, birinchi javobim savol emas, taklif bo&apos;ladi.
+          </p>
+
+          <div className="grid gap-5 md:grid-cols-2 md:gap-6">
+            <Select
+              id="service"
+              label="Qanday ish"
+              options={SERVICES}
+              placeholder="Tanlang"
+            />
+            <Select
+              id="tier"
+              label="Tarif"
+              options={TIERS}
+              placeholder="Hali tanlamadim"
+              defaultValue={cameFromPricing ? defaultTier : ""}
+            />
+            <Select id="budget" label="Byudjet" options={BUDGETS} placeholder="Tanlang" />
+            <Select id="timeline" label="Muddat" options={TIMELINES} placeholder="Tanlang" />
+
+            <Field id="company" label="Kompaniya">
+              <input
+                id="company"
+                name="company"
+                autoComplete="organization"
+                placeholder="Ixtiyoriy"
+                className={inputCls}
+              />
+            </Field>
+
+            <Field id="phone" label="Telefon">
+              <input
+                id="phone"
+                name="phone"
+                type="tel"
+                autoComplete="tel"
+                inputMode="tel"
+                placeholder="+998 …"
+                className={inputCls}
+              />
+            </Field>
+
+            <Select
+              id="preferredContact"
+              label="Qulay aloqa"
+              options={CONTACT_METHODS}
+              placeholder="Farqi yo'q"
+            />
+          </div>
+        </div>
+      </details>
 
       {/* Honeypot: positioned off-screen rather than display:none so bots that
           check computed styles still fill it. */}

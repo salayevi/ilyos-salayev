@@ -24,7 +24,7 @@ export default async function AdminStore() {
         </div>
         <Link
           href="/admin/store/new"
-          className="inline-flex h-11 items-center rounded-lg bg-gold px-5 text-sm font-medium text-void transition-colors hover:bg-gold-300"
+          className="inline-flex h-11 items-center rounded-lg bg-accent px-5 text-sm font-medium text-tp transition-colors hover:bg-accent-hover"
         >
           Yangi e&apos;lon
         </Link>
@@ -77,7 +77,7 @@ export default async function AdminStore() {
                   <p className="mt-0.5 truncate text-sm text-tt">{p.summary}</p>
                 </div>
 
-                <p className="font-mono text-sm text-gold">
+                <p className="font-mono text-sm text-accent-text">
                   {formatMoney(p.price, p.currency) ?? "kelishiladi"}
                 </p>
               </Link>

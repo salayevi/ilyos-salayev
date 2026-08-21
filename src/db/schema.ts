@@ -90,6 +90,218 @@ export const services = pgTable("services", {
   ...stamps,
 });
 
+/* ================================================================
+   Pricing
+   ----------------------------------------------------------------
+   One source of truth. The site had two — three `services` rows with
+   their own figures, and a DOG/WOLF/DRAGON card set written in code —
+   which meant the same work could be quoted twice at different prices
+   depending on which page a buyer landed on.
+
+   The catalogue below replaces both. Every number a visitor can see is
+   a row here, editable from the panel; the code contributes the order
+   of operations and nothing else. Adding a feature or repricing one is
+   an evening in the admin, not a deploy.
+   ================================================================ */
+
+/**
+ * What can be built, and how it is priced.
+ *
+ * `kind` decides which machinery applies:
+ *   `project`  — priced by the configurator. `basePrice` is the floor the
+ *                wizard starts from and `minimumPrice` the floor it may
+ *                never fall below, however sparse the selection.
+ *   `fixed`    — one published figure, no configuration. The audit is
+ *                genuinely a fixed piece of work and pretending otherwise
+ *                would be theatre.
+ *   `retainer` — billed monthly, not once.
+ */
+export const serviceCatalog = pgTable(
+  "service_catalog",
+  {
+    id: serial("id").primaryKey(),
+    slug: text("slug").notNull(),
+    name: text("name").notNull(),
+    /** One line, used on cards and in the wizard's project-type step. */
+    summary: text("summary").notNull().default(""),
+    description: text("description").notNull().default(""),
+
+    /** project · fixed · retainer */
+    kind: text("kind").notNull().default("project"),
+
+    /**
+     * Whole currency units. `basePrice` is what the configurator starts at
+     * before a single option is chosen, so it is the number the card shows
+     * as "dan boshlab" — never a final figure unless `kind` is `fixed`.
+     */
+    basePrice: integer("base_price").notNull().default(0),
+    minimumPrice: integer("minimum_price").notNull().default(0),
+    currency: text("currency").notNull().default("USD"),
+
+    /** Weeks, before any delivery-speed modifier. */
+    weeksMin: integer("weeks_min").notNull().default(0),
+    weeksMax: integer("weeks_max").notNull().default(0),
+
+    /** JSON string[] — what every engagement includes regardless of options. */
+    includes: text("includes").notNull().default("[]"),
+    /**
+     * JSON string[] of `pricing_groups.key`. A landing page has no use for the
+     * roles-and-permissions step, and showing it anyway is how a configurator
+     * starts feeling like paperwork.
+     */
+    groups: text("groups").notNull().default("[]"),
+
+    published: boolean("published").notNull().default(true),
+    position: integer("position").notNull().default(0),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    ...stamps,
+  },
+  (t) => [uniqueIndex("service_catalog_slug_idx").on(t.slug)],
+);
+
+/** One step of the configurator. */
+export const pricingGroups = pgTable(
+  "pricing_groups",
+  {
+    id: serial("id").primaryKey(),
+    key: text("key").notNull(),
+    label: text("label").notNull(),
+    /** Shown under the step title — why this question is being asked. */
+    help: text("help").notNull().default(""),
+
+    /** one · many */
+    select: text("select").notNull().default("one"),
+    /** A required step blocks the wizard until answered. */
+    required: boolean("required").notNull().default(false),
+
+    position: integer("position").notNull().default(0),
+    active: boolean("active").notNull().default(true),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    ...stamps,
+  },
+  (t) => [uniqueIndex("pricing_groups_key_idx").on(t.key)],
+);
+
+/**
+ * One answer, and what choosing it costs.
+ *
+ * A single option can move three independent numbers, and conflating them is
+ * the most common way a quote turns into an argument later: `amount` is billed
+ * once, `monthly` is what I charge every month after, and `externalMin/Max` is
+ * what someone else charges — a payment provider, an AI API, a host. The last
+ * one is never mine to keep and is displayed apart from the other two.
+ */
+export const pricingOptions = pgTable(
+  "pricing_options",
+  {
+    id: serial("id").primaryKey(),
+    groupKey: text("group_key").notNull(),
+    key: text("key").notNull(),
+    label: text("label").notNull(),
+    description: text("description").notNull().default(""),
+
+    /**
+     * `flat` adds `amount` to the subtotal. `multiplier` scales the subtotal
+     * once every flat has landed, stored in basis points so the column stays
+     * an integer — 13500 is x1.35. Percentages are just multipliers, so there
+     * is no third mode to reason about.
+     */
+    mode: text("mode").notNull().default("flat"),
+    amount: integer("amount").notNull().default(0),
+
+    monthly: integer("monthly").notNull().default(0),
+    externalMin: integer("external_min").notNull().default(0),
+    externalMax: integer("external_max").notNull().default(0),
+
+    /** Added to the estimated span, before parallelism and any delivery factor. */
+    weeks: integer("weeks").notNull().default(0),
+    /**
+     * Scales the whole timeline, in basis points (10000 = unchanged).
+     *
+     * Separate from `amount` because rush delivery moves two numbers in
+     * opposite directions: the price up and the calendar down. Expressing both
+     * with one field forced the estimate to contradict its own option label.
+     */
+    weeksFactor: integer("weeks_factor").notNull().default(10_000),
+
+    /** JSON string[] of option keys. Selected automatically when this is. */
+    requires: text("requires").notNull().default("[]"),
+    /** JSON string[] of option keys that cannot be held at the same time. */
+    conflicts: text("conflicts").notNull().default("[]"),
+
+    /**
+     * Forces the result to a range rather than a figure. Some work genuinely
+     * cannot be priced from a checkbox, and inventing a precise number for it
+     * would be a false promise the quote has to walk back.
+     */
+    needsReview: boolean("needs_review").notNull().default(false),
+
+    position: integer("position").notNull().default(0),
+    active: boolean("active").notNull().default(true),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    ...stamps,
+  },
+  (t) => [
+    uniqueIndex("pricing_options_group_key_idx").on(t.groupKey, t.key),
+    index("pricing_options_group_idx").on(t.groupKey),
+  ],
+);
+
+/**
+ * A configuration a visitor built and kept.
+ *
+ * The computed figures are written alongside the selections rather than
+ * recalculated on read: a quote shown on Tuesday must still say the same
+ * thing on Friday, even if a feature was repriced on Wednesday. The
+ * selections are stored too, so a stale estimate can be re-run deliberately
+ * and the difference explained.
+ */
+export const estimates = pgTable(
+  "estimates",
+  {
+    id: serial("id").primaryKey(),
+    /** EST-2026-000123 — what a person quotes back over the phone. */
+    publicId: text("public_id").notNull(),
+    serviceSlug: text("service_slug").notNull(),
+
+    /** JSON { [groupKey]: string | string[] } */
+    selections: text("selections").notNull().default("{}"),
+    /** JSON — the full breakdown as it was shown, line by line. */
+    breakdown: text("breakdown").notNull().default("[]"),
+    /** The visitor's own words. Never priced automatically. */
+    idea: text("idea").notNull().default(""),
+
+    oneTime: integer("one_time").notNull().default(0),
+    monthly: integer("monthly").notNull().default(0),
+    externalMin: integer("external_min").notNull().default(0),
+    externalMax: integer("external_max").notNull().default(0),
+    weeksMin: integer("weeks_min").notNull().default(0),
+    weeksMax: integer("weeks_max").notNull().default(0),
+    currency: text("currency").notNull().default("USD"),
+
+    /** When true the figures above bound a range instead of naming a price. */
+    isRange: boolean("is_range").notNull().default(false),
+    rangeLow: integer("range_low").notNull().default(0),
+    rangeHigh: integer("range_high").notNull().default(0),
+
+    /** Filled only if the visitor carried the estimate into an order. */
+    name: text("name").notNull().default(""),
+    email: text("email").notNull().default(""),
+    phone: text("phone").notNull().default(""),
+    company: text("company").notNull().default(""),
+
+    /** draft · submitted · reviewing · quoted · accepted · declined */
+    status: text("status").notNull().default("draft"),
+    notes: text("notes").notNull().default(""),
+    ...stamps,
+  },
+  (t) => [
+    uniqueIndex("estimates_public_id_idx").on(t.publicId),
+    index("estimates_created_idx").on(t.createdAt),
+    index("estimates_status_idx").on(t.status),
+  ],
+);
+
 /**
  * A finished website offered for sale.
  *
@@ -158,15 +370,61 @@ export const testimonials = pgTable("testimonials", {
   ...stamps,
 });
 
-export const messages = pgTable("messages", {
-  id: serial("id").primaryKey(),
-  name: text("name").notNull(),
-  email: text("email").notNull(),
-  body: text("body").notNull(),
-  read: boolean("read").notNull().default(false),
-  archived: boolean("archived").notNull().default(false),
-  ...stamps,
-});
+/**
+ * An inbound enquiry, and the lead it becomes.
+ *
+ * This started as a three-field contact form and the table shows it. The extra
+ * columns below are what a first reply actually needs to be useful: a message
+ * saying "I want a website" and one saying "a store, roughly $4k, needed in six
+ * weeks" deserve different answers, and asking those questions in the reply
+ * costs a day per round trip.
+ *
+ * Everything added is optional with an empty default, so the rows written by
+ * the old form stay valid and the migration is additive — no backfill, no
+ * rewrite, nothing to undo if a field turns out not to earn its place.
+ *
+ * `status` is the pipeline. It defaults to `new`, which is exactly what every
+ * existing row already is.
+ */
+export const messages = pgTable(
+  "messages",
+  {
+    id: serial("id").primaryKey(),
+    name: text("name").notNull(),
+    email: text("email").notNull(),
+    body: text("body").notNull(),
+
+    /** Qualifying detail. Blank means the sender skipped the optional block. */
+    company: text("company").notNull().default(""),
+    phone: text("phone").notNull().default(""),
+    /** Which kind of work — matches the service categories offered on the site. */
+    service: text("service").notNull().default(""),
+    /**
+     * dog · wolf · dragon, carried over from the plan card the visitor clicked.
+     * It is the single most useful thing to know before replying, and it costs
+     * the sender nothing because the choice was already made on /pricing.
+     */
+    tier: text("tier").notNull().default(""),
+    /** A bucket, never a figure — an exact number here would be a fiction. */
+    budget: text("budget").notNull().default(""),
+    timeline: text("timeline").notNull().default(""),
+    /** email · telegram · phone */
+    preferredContact: text("preferred_contact").notNull().default(""),
+
+    /** new · contacted · qualified · proposal · negotiation · won · lost */
+    status: text("status").notNull().default("new"),
+    /** Private working notes. Never shown to the sender. */
+    notes: text("notes").notNull().default(""),
+
+    read: boolean("read").notNull().default(false),
+    archived: boolean("archived").notNull().default(false),
+    ...stamps,
+  },
+  // The inbox is always read newest-first and almost always filtered by
+  // pipeline state, so both get an index rather than a sequential scan that
+  // grows with every enquiry ever received.
+  (t) => [index("messages_created_idx").on(t.createdAt), index("messages_status_idx").on(t.status)],
+);
 
 /**
  * One inbox for both revenue streams: a booking against a service tariff and a
@@ -279,3 +537,7 @@ export type Message = typeof messages.$inferSelect;
 export type Order = typeof orders.$inferSelect;
 export type Visitor = typeof visitors.$inferSelect;
 export type Admin = typeof admins.$inferSelect;
+export type CatalogService = typeof serviceCatalog.$inferSelect;
+export type PricingGroup = typeof pricingGroups.$inferSelect;
+export type PricingOption = typeof pricingOptions.$inferSelect;
+export type Estimate = typeof estimates.$inferSelect;

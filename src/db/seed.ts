@@ -3,13 +3,17 @@ import {
   admins,
   messages,
   posts,
+  pricingGroups,
+  pricingOptions,
   products,
   projects,
+  serviceCatalog,
   services,
   settings,
   testimonials,
 } from "./schema";
 import { hashPassword } from "../lib/password";
+import { GROUPS, OPTIONS, SERVICES as CATALOG } from "./pricing-seed";
 
 const PROJECTS = [
   {
@@ -415,6 +419,46 @@ async function main() {
 
   await fill("settings", await db.select().from(settings), () =>
     db.insert(settings).values(Object.entries(defaults).map(([key, value]) => ({ key, value }))),
+  );
+
+  // ---- pricing ------------------------------------------------------------
+  // Filled independently of the legacy `services` table, which stays untouched:
+  // the old rows are what the current production site still renders, and they
+  // are only retired once the catalogue is live on every surface.
+  await fill("service_catalog", await db.select().from(serviceCatalog), () =>
+    db.insert(serviceCatalog).values(
+      CATALOG.map((s) => ({
+        ...s,
+        includes: JSON.stringify(s.includes),
+        groups: JSON.stringify(s.groups),
+      })),
+    ),
+  );
+
+  await fill("pricing_groups", await db.select().from(pricingGroups), () =>
+    db.insert(pricingGroups).values(GROUPS),
+  );
+
+  await fill("pricing_options", await db.select().from(pricingOptions), () =>
+    db.insert(pricingOptions).values(
+      OPTIONS.map((o) => ({
+        groupKey: o.groupKey,
+        key: o.key,
+        label: o.label,
+        description: o.description ?? "",
+        mode: o.mode ?? "flat",
+        amount: o.amount ?? 0,
+        monthly: o.monthly ?? 0,
+        externalMin: o.externalMin ?? 0,
+        externalMax: o.externalMax ?? 0,
+        weeks: o.weeks ?? 0,
+        weeksFactor: o.weeksFactor ?? 10_000,
+        requires: JSON.stringify(o.requires ?? []),
+        conflicts: JSON.stringify(o.conflicts ?? []),
+        needsReview: o.needsReview ?? false,
+        position: o.position,
+      })),
+    ),
   );
 
   console.log("Seed tayyor.");

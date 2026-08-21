@@ -58,7 +58,7 @@ export function OrderForm({
             href={state.telegramUrl}
             target="_blank"
             rel="noreferrer noopener"
-            className="mt-5 inline-flex h-11 items-center justify-center rounded-lg bg-gold px-5 text-sm font-medium text-void transition-colors hover:bg-gold-300"
+            className="mt-5 inline-flex h-11 items-center justify-center rounded-lg bg-accent px-5 text-sm font-medium text-tp transition-colors hover:bg-accent-hover"
           >
             Telegramda xabarni ochish &rarr;
           </a>
@@ -86,7 +86,7 @@ export function OrderForm({
   }
 
   const inputCls =
-    "h-12 w-full rounded-lg border border-line-2 bg-s2 px-4 text-[15px] text-tp placeholder:text-tt focus:border-gold focus:outline-none";
+    "h-12 w-full rounded-lg border border-line-2 bg-s2 px-4 text-[15px] text-tp placeholder:text-tt focus:border-accent focus:outline-none";
 
   return (
     <form action={action} noValidate className="rounded-[16px] border border-line bg-s1 p-5 md:p-7">
@@ -95,7 +95,7 @@ export function OrderForm({
 
       <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-line pb-4">
         <p className="text-[17px] font-medium">{itemTitle}</p>
-        {priceLine && <p className="font-mono text-sm text-gold">{priceLine}</p>}
+        {priceLine && <p className="font-mono text-sm text-accent-text">{priceLine}</p>}
       </div>
 
       <div className="mt-5 grid gap-4 md:grid-cols-2">
@@ -158,7 +158,7 @@ export function OrderForm({
                 ? "Domen, kontent yoki o'zgartirish bo'yicha talablaringiz"
                 : "Nima qurmoqchisiz va qachonga kerak?"
             }
-            className="w-full rounded-lg border border-line-2 bg-s2 p-4 text-[15px] leading-[1.6] text-tp placeholder:text-tt focus:border-gold focus:outline-none"
+            className="w-full rounded-lg border border-line-2 bg-s2 p-4 text-[15px] leading-[1.6] text-tp placeholder:text-tt focus:border-accent focus:outline-none"
           />
         </OrderField>
       </div>
@@ -187,7 +187,7 @@ function Submit({ label }: { label: string }) {
     <button
       type="submit"
       disabled={pending}
-      className="mt-5 flex h-12.5 w-full items-center justify-center rounded-lg bg-gold text-[15px] font-medium text-void transition-colors hover:bg-gold-300 disabled:bg-s3 disabled:text-td"
+      className="mt-5 flex h-12.5 w-full items-center justify-center rounded-lg bg-accent text-[15px] font-medium text-tp transition-colors hover:bg-accent-hover disabled:bg-s3 disabled:text-td"
     >
       {pending ? "Yuborilmoqda…" : label}
     </button>

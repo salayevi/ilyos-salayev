@@ -12,7 +12,7 @@ function BarList({ rows, empty }: { rows: { label: string; count: number }[]; em
             <span className="font-mono text-xs text-tp">{row.count}</span>
           </div>
           <div className="mt-1.5 h-px bg-line-2">
-            <div className="h-px bg-gold" style={{ width: `${(row.count / max) * 100}%` }} />
+            <div className="h-px bg-accent" style={{ width: `${(row.count / max) * 100}%` }} />
           </div>
         </li>
       ))}
@@ -42,7 +42,7 @@ export default async function AnalyticsPage() {
         {stats.map((stat) => (
           <div key={stat.label} className="rounded-[12px] border border-line bg-s1 p-4 md:p-5">
             <p className="label text-[10px]">{stat.label}</p>
-            <p className="mt-2 font-display text-3xl text-gold md:text-5xl">{stat.value}</p>
+            <p className="mt-2 font-display text-3xl text-accent-text md:text-5xl">{stat.value}</p>
           </div>
         ))}
       </div>

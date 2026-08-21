@@ -1,10 +1,10 @@
 import Image from "next/image";
 
 const TONES = {
-  gold: "radial-gradient(70% 55% at 28% 22%, rgb(200 169 106 / 0.20), transparent 62%)",
-  azure: "radial-gradient(70% 55% at 72% 26%, rgb(74 143 231 / 0.24), transparent 62%)",
-  green: "radial-gradient(70% 60% at 45% 30%, rgb(74 222 128 / 0.15), transparent 60%)",
-  violet: "radial-gradient(70% 60% at 60% 25%, rgb(160 120 220 / 0.18), transparent 60%)",
+  gold: "radial-gradient(70% 55% at 28% 22%, rgb(214 58 80 / 0.20), transparent 62%)",
+  azure: "radial-gradient(70% 55% at 72% 26%, rgb(176 29 54 / 0.26), transparent 62%)",
+  green: "radial-gradient(70% 60% at 45% 30%, rgb(153 27 48 / 0.22), transparent 60%)",
+  violet: "radial-gradient(70% 60% at 60% 25%, rgb(224 82 102 / 0.15), transparent 60%)",
 } as const;
 
 export type Tone = keyof typeof TONES;
@@ -70,8 +70,8 @@ export function MediaFrame({
           className="absolute inset-0"
           style={{
             background: src
-              ? "linear-gradient(180deg, rgb(5 6 7 / 0.1) 0%, transparent 30%, rgb(5 6 7 / 0.88))"
-              : "linear-gradient(180deg, transparent 42%, rgb(5 6 7 / 0.94))",
+              ? "linear-gradient(180deg, rgb(5 2 3 / 0.1) 0%, transparent 30%, rgb(5 2 3 / 0.88))"
+              : "linear-gradient(180deg, transparent 42%, rgb(5 2 3 / 0.94))",
           }}
         />
       )}

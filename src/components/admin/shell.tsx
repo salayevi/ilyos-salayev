@@ -40,14 +40,14 @@ export function AdminNav({ unread, newOrders }: { unread: number; newOrders: num
                 href={n.href}
                 aria-current={on ? "page" : undefined}
                 className={`flex items-center justify-between gap-3 rounded-lg px-3.5 py-2.5 text-sm transition-colors ${
-                  on ? "bg-gold text-void" : "text-ts hover:bg-s2 hover:text-tp"
+                  on ? "bg-accent text-tp" : "text-ts hover:bg-s2 hover:text-tp"
                 }`}
               >
                 {n.label}
                 {badge > 0 && (
                   <span
                     className={`shrink-0 rounded-full px-1.5 py-0.5 text-[11px] font-medium ${
-                      on ? "bg-void/20 text-void" : "bg-gold text-void"
+                      on ? "bg-void/35 text-tp" : "bg-accent text-tp"
                     }`}
                   >
                     {badge}

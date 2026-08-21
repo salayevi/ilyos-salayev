@@ -77,7 +77,7 @@ export default async function ProductsPage() {
         <ol className="mt-5 md:mt-7">
           {STEPS.map((s, i) => (
             <li key={s.title} className="flex gap-4 border-b border-line py-4 md:gap-6 md:py-6">
-              <span className="pt-1 font-mono text-xs text-gold">
+              <span className="pt-1 font-mono text-xs text-accent-text">
                 {String(i + 1).padStart(2, "0")}
               </span>
               <div>

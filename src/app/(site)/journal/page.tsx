@@ -25,7 +25,7 @@ export default async function JournalPage() {
           {posts.map((p) => (
             <li key={p.id} className="border-b border-line">
               <Link href={`/journal/${p.slug}`} className="group block py-6 md:py-8">
-                <h2 className="text-xl leading-[1.3] font-medium transition-colors group-hover:text-gold md:text-[28px]">
+                <h2 className="text-xl leading-[1.3] font-medium transition-colors group-hover:text-accent-text md:text-[28px]">
                   {p.title}
                 </h2>
                 {p.excerpt && <p className="mt-2.5 text-[15px] text-ts md:text-base">{p.excerpt}</p>}

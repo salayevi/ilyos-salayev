@@ -42,6 +42,11 @@ export function SiteFooter({ settings }: { settings: SiteSettings }) {
                 </Link>
               </li>
               <li>
+                <Link href="/pricing" className="hover:text-tp">
+                  Tariflar
+                </Link>
+              </li>
+              <li>
                 <Link href="/about" className="hover:text-tp">
                   Men haqimda
                 </Link>

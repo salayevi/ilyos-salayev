@@ -19,7 +19,7 @@ export default async function AdminProjects() {
         </div>
         <Link
           href="/admin/projects/new"
-          className="inline-flex h-11 items-center rounded-lg bg-gold px-5 text-sm font-medium text-void transition-colors hover:bg-gold-300"
+          className="inline-flex h-11 items-center rounded-lg bg-accent px-5 text-sm font-medium text-tp transition-colors hover:bg-accent-hover"
         >
           Yangi loyiha
         </Link>
@@ -57,7 +57,7 @@ export default async function AdminProjects() {
                   <p className="flex flex-wrap items-center gap-2 font-medium">
                     {p.title}
                     {p.featured && (
-                      <span className="rounded bg-gold-900 px-1.5 py-0.5 text-[10px] text-gold-100">
+                      <span className="rounded bg-crimson-900 px-1.5 py-0.5 text-[10px] text-crimson-100">
                         tanlangan
                       </span>
                     )}

@@ -11,7 +11,7 @@ export default async function AdminJournal() {
         <h1 className="font-display text-4xl tracking-[-0.02em] md:text-5xl">Jurnal</h1>
         <Link
           href="/admin/journal/new"
-          className="inline-flex h-11 items-center rounded-lg bg-gold px-5 text-sm font-medium text-void transition-colors hover:bg-gold-300"
+          className="inline-flex h-11 items-center rounded-lg bg-accent px-5 text-sm font-medium text-tp transition-colors hover:bg-accent-hover"
         >
           Yangi yozuv
         </Link>

@@ -58,7 +58,11 @@ export function VisitorTracker({ consent }: { consent: "granted" | "denied" | nu
   if (decided) return null;
   return (
     <aside
-      className="fixed right-4 bottom-4 z-90 max-w-sm rounded-[16px] border border-line-2 bg-s1 p-5 shadow-2xl md:right-6 md:bottom-6"
+      // `max-w-sm` alone is 384px, which on a 390px phone leaves the card
+      // hanging 10px off the left edge once the right inset is counted. Pinning
+      // both insets lets it shrink to the screen, and the max-width still caps
+      // it on a desktop where a full-width consent bar would be absurd.
+      className="fixed right-4 bottom-4 left-4 z-90 max-w-sm rounded-[16px] border border-line-2 bg-s1 p-5 shadow-2xl md:right-6 md:bottom-6 md:left-auto"
       aria-label="Tashrif statistikasi roziligi"
     >
       <p className="text-sm font-medium">Tashrif statistikasi</p>
@@ -70,7 +74,7 @@ export function VisitorTracker({ consent }: { consent: "granted" | "denied" | nu
         <button
           type="button"
           onClick={() => void decide(true)}
-          className="inline-flex h-9 items-center rounded-lg bg-gold px-3.5 text-[13px] font-medium text-void"
+          className="inline-flex h-9 items-center rounded-lg bg-accent px-3.5 text-[13px] font-medium text-tp"
         >
           Ruxsat berish
         </button>
