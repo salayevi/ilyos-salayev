@@ -1,56 +1,47 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { PlanCard } from "@/components/site/plan-card";
-import { PlanComparison } from "@/components/site/plan-comparison";
 import { Reveal } from "@/components/site/reveal";
-import { buildPlans, DEFAULT_DOG_PRICE, DEFAULT_WOLF_PRICE } from "@/lib/plans";
-import { getSettings } from "@/lib/queries";
+import { formatMoney } from "@/lib/format";
+import { getCatalog } from "@/lib/queries";
 import { abs, breadcrumbSchema, jsonLd } from "@/lib/seo";
 
 export const metadata: Metadata = {
-  title: "Tariflar",
+  title: "Xizmatlar va narxlar",
   description:
-    "Dog, Wolf va Dragon — hamkorlikning uch chuqurligi. Nima kirishi, qancha vaqt olishi va " +
-    "qaysi biri sizga mosligi bir sahifada.",
+    "Landing sahifadan to'liq tizimgacha. Har bir yo'nalishning boshlang'ich narxi ochiq, " +
+    "yakuniy narx esa kalkulyator orqali loyihangizga qarab hisoblanadi.",
   alternates: { canonical: "/pricing" },
   openGraph: {
-    title: "Tariflar — Dog · Wolf · Dragon",
-    description: "Hamkorlikning uch chuqurligi. Nima kiradi, qancha vaqt oladi, kimga mos.",
+    title: "Xizmatlar va narxlar — Ilyos Salayev",
+    description: "Boshlang'ich narxlar ochiq. Yakuniy narxni kalkulyator hisoblaydi.",
     url: abs("/pricing"),
   },
 };
 
 const FAQ = [
   {
-    q: "Narx nega 'dan boshlab'?",
-    a: "Chunki sahifalar soni, integratsiyalar va kontent hajmi har loyihada boshqacha. Ko'rsatilgan raqam — eng past chegara. Aniq narxni suhbatdan keyin bitta sahifalik taklifda beraman va u o'zgarmaydi.",
+    q: "Nega yakuniy narx darhol ko'rsatilmaydi?",
+    a: "Chunki u yo'q. Bir xil «sayt» so'zi ortida bir haftalik ish ham, uch oylik tizim ham turishi mumkin. Kalkulyator sizdan hajm, dizayn va funksiyalarni so'raydi va shundan keyin raqam beradi — har bir qismi ochiq ko'rsatilgan holda.",
   },
   {
-    q: "Dragon nega raqamsiz?",
-    a: "Dragon — buyurtma tizim: baza, API, admin panel, avtomatlashtirish. Buni kartadan narxlash taxmin bo'lardi, taxminni esa keyin sizni undan qaytarishga to'g'ri keladi. Hajmni aniqlab, keyin narx aytaman.",
+    q: "Ko'rsatilgan narx o'zgaradimi?",
+    a: "Kalkulyator bergan raqam taxminiy. Suhbatdan keyin bitta sahifalik taklif beraman va undagi narx qat'iy — ish davomida o'zgarmaydi. Agar siz hajmni o'zgartirsangiz, farqi alohida kelishiladi.",
   },
   {
-    q: "Tarifni keyin o'zgartirsa bo'ladimi?",
-    a: "Ha. Ko'p loyiha Dog'dan boshlanib Wolf'ga o'sadi. To'langan summa keyingi bosqichga hisobga olinadi — qaytadan to'lash kerak emas.",
+    q: "Oylik to'lov majburiymi?",
+    a: "Yo'q. Parvarishsiz ham topshiraman — kod va kirish ma'lumotlari sizniki bo'ladi. Lekin hosting, yangilanishlar va xatolarni kimdir kuzatishi kerak; buni o'zingiz qilsangiz ham bo'ladi.",
   },
   {
-    q: "To'lov qanday amalga oshadi?",
-    a: "Ikki qismda: boshlashda yarmi, topshirishda yarmi. Dragon uchun bosqichlarga bo'linadi. Har bir bosqich yakunida ishni ko'rasiz.",
-  },
-  {
-    q: "Muddatga kafolat bormi?",
-    a: "Ko'rsatilgan muddat — kontent va javoblar o'z vaqtida kelgan holat uchun. Kechikish sabablari har haftalik demoda ochiq aytiladi, oxirida emas.",
+    q: "Tashqi xizmatlar to'lovi nima?",
+    a: "Hosting, domen, SMS, AI API — bularni men emas, ularning egalari oladi va siz to'g'ridan-to'g'ri to'laysiz. Kalkulyator ularni alohida ko'rsatadi, chunki ularni ishlab chiqish narxiga qo'shib yuborish rost bo'lmaydi.",
   },
 ];
 
 export default async function PricingPage() {
-  const s = await getSettings();
-  // Editable from the panel; the code defaults keep the page honest when the
-  // database is unreachable rather than rendering an empty price.
-  const dog = Number(s.planDogPrice) || DEFAULT_DOG_PRICE;
-  const wolf = Number(s.planWolfPrice) || DEFAULT_WOLF_PRICE;
-  const plans = buildPlans(dog, wolf);
+  const catalog = await getCatalog({ onlyPublished: true });
+  const projects = catalog.filter((s) => s.kind === "project");
+  const fixed = catalog.filter((s) => s.kind !== "project");
 
   return (
     <>
@@ -60,7 +51,7 @@ export default async function PricingPage() {
           __html: jsonLd(
             breadcrumbSchema([
               { name: "Bosh sahifa", path: "/" },
-              { name: "Tariflar", path: "/pricing" },
+              { name: "Xizmatlar va narxlar", path: "/pricing" },
             ]),
             {
               "@type": "FAQPage",
@@ -75,37 +66,125 @@ export default async function PricingPage() {
       />
 
       <section className="mx-auto max-w-[1440px] px-5 pt-9 md:px-10 md:pt-28 lg:px-20">
-        <p className="label text-[10px] md:text-xs">Tariflar</p>
+        <p className="label text-[10px] md:text-xs">Xizmatlar va narxlar</p>
         <h1 className="mt-3.5 font-display text-[48px] leading-[1.02] tracking-[-0.03em] text-balance md:mt-6 md:text-8xl">
-          Uch chuqurlik
+          Nima qurmoqchisiz?
         </h1>
-        <p className="mt-4 max-w-[600px] text-base text-ts md:mt-5 md:text-lg">
-          Bular obuna emas — loyihaga qanchalik chuqur kirishimning uch darajasi. Uchalasi bir xil
-          savollarga bir xil tartibda javob beradi, shuning uchun ularni yonma-yon solishtirsa
-          bo&apos;ladi.
+        <p className="mt-4 max-w-[620px] text-base text-ts md:mt-5 md:text-lg">
+          Har bir yo&apos;nalishning boshlang&apos;ich narxi ochiq. Yakuniy raqam loyihaning
+          hajmiga, dizayniga va funksiyalariga bog&apos;liq — uni kalkulyator hisoblaydi va
+          nimadan tashkil topganini qatorma-qator ko&apos;rsatadi.
         </p>
       </section>
 
-      <section className="mx-auto max-w-[1440px] px-5 pt-10 md:px-10 md:pt-16 lg:px-20">
-        <div className="grid items-start gap-5 md:gap-6 lg:grid-cols-3">
-          {plans.map((p, i) => (
-            <Reveal key={p.tier} delay={i * 80}>
-              <PlanCard plan={p} />
-            </Reveal>
-          ))}
-        </div>
-      </section>
+      {projects.length === 0 ? (
+        <section className="mx-auto max-w-[1440px] px-5 pt-10 md:px-10 lg:px-20">
+          <p className="text-ts">Katalog hozircha bo&apos;sh.</p>
+        </section>
+      ) : (
+        <section className="mx-auto max-w-[1440px] px-5 pt-10 md:px-10 md:pt-16 lg:px-20">
+          <div className="grid gap-5 md:grid-cols-2 md:gap-6 lg:grid-cols-3">
+            {projects.map((service, i) => (
+              <Reveal key={service.id} delay={i * 60}>
+                <Link
+                  href={`/pricing/${service.slug}`}
+                  className="group flex h-full flex-col rounded-[16px] border border-line bg-s1 p-6 transition-colors hover:border-line-3 md:p-7"
+                >
+                  <h2 className="text-xl font-medium md:text-2xl">{service.name}</h2>
+                  <p className="mt-2.5 text-[15px] leading-[1.65] text-ts">{service.summary}</p>
 
-      <section className="mx-auto max-w-[1440px] px-5 pt-16 md:px-10 md:pt-30 lg:px-20">
-        <Reveal>
-          <div className="flex items-baseline justify-between gap-6 border-b border-line pb-5">
-            <h2 className="label text-[10px] md:text-xs">01 / Yonma-yon</h2>
+                  <div className="mt-5 border-t border-line pt-4">
+                    <p className="font-display text-[30px] leading-none text-accent-text">
+                      {formatMoney(service.basePrice, service.currency)}
+                      <span className="ml-2 align-middle font-sans text-xs text-tt">
+                        dan boshlab
+                      </span>
+                    </p>
+                    <p className="mt-1.5 font-mono text-[11px] text-tt">
+                      {service.weeksMin}–{service.weeksMax} hafta
+                    </p>
+                  </div>
+
+                  {service.includes.length > 0 && (
+                    <ul className="mt-4 flex flex-col gap-1.5">
+                      {service.includes.slice(0, 4).map((item) => (
+                        <li key={item} className="flex gap-2.5 text-[13.5px] text-ts">
+                          <span aria-hidden className="text-tm">
+                            &mdash;
+                          </span>
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
+                  <span className="mt-auto flex items-center gap-2 pt-6 text-[14px] text-accent-text">
+                    Narxni hisoblash
+                    <span
+                      aria-hidden
+                      className="transition-transform duration-300 group-hover:translate-x-1"
+                    >
+                      &rarr;
+                    </span>
+                  </span>
+                </Link>
+              </Reveal>
+            ))}
           </div>
-        </Reveal>
-        <Reveal>
-          <PlanComparison plans={plans} />
-        </Reveal>
-      </section>
+        </section>
+      )}
+
+      {fixed.length > 0 && (
+        <section className="mx-auto max-w-[1440px] px-5 pt-16 md:px-10 md:pt-30 lg:px-20">
+          <Reveal>
+            <div className="border-b border-line pb-5">
+              <h2 className="label text-[10px] md:text-xs">01 / Belgilangan narxli</h2>
+            </div>
+          </Reveal>
+          <p className="mt-5 max-w-[620px] text-[15px] text-ts md:text-base">
+            Bularning hajmi oldindan ma&apos;lum, shuning uchun kalkulyator kerak emas — narxi
+            shu.
+          </p>
+          <div className="mt-6 grid gap-5 md:mt-9 md:grid-cols-2 md:gap-6">
+            {fixed.map((service, i) => (
+              <Reveal key={service.id} delay={i * 60}>
+                <article className="flex h-full flex-col rounded-[16px] border border-line bg-s1 p-6 md:p-7">
+                  <div className="flex items-baseline justify-between gap-4">
+                    <h3 className="text-xl font-medium md:text-2xl">{service.name}</h3>
+                    <p className="shrink-0 font-display text-[28px] leading-none text-accent-text">
+                      {formatMoney(service.basePrice, service.currency)}
+                      {service.kind === "retainer" && (
+                        <span className="ml-1 align-middle font-sans text-xs text-tt">/oy</span>
+                      )}
+                    </p>
+                  </div>
+                  <p className="mt-3 text-[15px] leading-[1.7] text-ts">{service.description}</p>
+                  {service.includes.length > 0 && (
+                    <ul className="mt-4 flex flex-col gap-1.5">
+                      {service.includes.map((item) => (
+                        <li key={item} className="flex gap-2.5 text-[13.5px] text-ts">
+                          <span aria-hidden className="text-accent-text">
+                            &mdash;
+                          </span>
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  <div className="mt-auto pt-6">
+                    <Link
+                      href={`/contact?xizmat=${service.slug}`}
+                      className="inline-flex h-11 w-full items-center justify-center rounded-lg border border-line-2 text-sm font-medium transition-colors hover:border-line-3 hover:bg-s2"
+                    >
+                      So&apos;rov yuborish
+                    </Link>
+                  </div>
+                </article>
+              </Reveal>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="mx-auto max-w-[1440px] px-5 pt-16 md:px-10 md:pt-30 lg:px-20">
         <Reveal>

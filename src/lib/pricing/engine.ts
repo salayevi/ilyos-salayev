@@ -26,6 +26,8 @@ export type PriceOption = {
   groupKey: string;
   key: string;
   label: string;
+  /** Shown under the option. Presentation, but it travels with the row. */
+  description?: string;
   mode: OptionMode;
   /** Whole currency for `flat`; basis points for `multiplier` (13500 = x1.35). */
   amount: number;
@@ -43,6 +45,7 @@ export type PriceOption = {
 export type PriceGroup = {
   key: string;
   label: string;
+  help?: string;
   select: "one" | "many";
   required: boolean;
 };

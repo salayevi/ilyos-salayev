@@ -4,15 +4,20 @@ import { and, asc, count, desc, eq } from "drizzle-orm";
 
 import { db } from "@/db";
 import {
+  estimates,
   messages,
   orders,
   posts,
+  pricingGroups,
+  pricingOptions,
   products,
   projects,
+  serviceCatalog,
   services,
   settings,
   testimonials,
 } from "@/db/schema";
+import type { Line, PriceGroup, PriceOption } from "./pricing/engine";
 import { type Metric, parseJson } from "./validators";
 
 
@@ -254,5 +259,141 @@ export async function getSettings(): Promise<SiteSettings> {
       return map;
     },
     { ...SETTING_FALLBACKS },
+  );
+}
+
+/* ---------------------------------------------------------------- pricing */
+
+export type CatalogView = Omit<
+  typeof serviceCatalog.$inferSelect,
+  "includes" | "groups"
+> & { includes: string[]; groups: string[] };
+
+function toCatalogView(row: typeof serviceCatalog.$inferSelect): CatalogView {
+  return {
+    ...row,
+    includes: parseJson<string[]>(row.includes, []),
+    groups: parseJson<string[]>(row.groups, []),
+  };
+}
+
+export async function getCatalog(opts: { onlyPublished?: boolean } = {}): Promise<CatalogView[]> {
+  return safeRead(
+    "service catalog",
+    async () => {
+      const base = db.select().from(serviceCatalog).$dynamic();
+      const rows = await (opts.onlyPublished
+        ? base.where(eq(serviceCatalog.published, true))
+        : base
+      ).orderBy(asc(serviceCatalog.position));
+      return rows.map(toCatalogView);
+    },
+    [],
+  );
+}
+
+export async function getCatalogService(slug: string): Promise<CatalogView | null> {
+  return safeRead(
+    `catalog ${slug}`,
+    async () => {
+      const [row] = await db
+        .select()
+        .from(serviceCatalog)
+        .where(eq(serviceCatalog.slug, slug))
+        .limit(1);
+      return row ? toCatalogView(row) : null;
+    },
+    null,
+  );
+}
+
+/**
+ * The configurator's whole vocabulary in one read.
+ *
+ * Returned as the engine's own types so the same values can be handed to a
+ * client component and fed straight back into `calculate` there — the browser
+ * prices a change without a round trip, and the server recomputes from these
+ * same rows when the estimate is saved. Two callers, one shape, no drift.
+ */
+export type PricingConfig = { groups: PriceGroup[]; options: PriceOption[] };
+
+export async function getPricingConfig(): Promise<PricingConfig> {
+  return safeRead(
+    "pricing config",
+    async () => {
+      const [groupRows, optionRows] = await Promise.all([
+        db
+          .select()
+          .from(pricingGroups)
+          .where(eq(pricingGroups.active, true))
+          .orderBy(asc(pricingGroups.position)),
+        db
+          .select()
+          .from(pricingOptions)
+          .where(eq(pricingOptions.active, true))
+          .orderBy(asc(pricingOptions.position)),
+      ]);
+
+      return {
+        groups: groupRows.map((g) => ({
+          key: g.key,
+          label: g.label,
+          help: g.help,
+          select: g.select === "many" ? ("many" as const) : ("one" as const),
+          required: g.required,
+        })),
+        options: optionRows.map((o) => ({
+          groupKey: o.groupKey,
+          key: o.key,
+          label: o.label,
+          description: o.description,
+          mode: o.mode === "multiplier" ? ("multiplier" as const) : ("flat" as const),
+          amount: o.amount,
+          monthly: o.monthly,
+          externalMin: o.externalMin,
+          externalMax: o.externalMax,
+          weeks: o.weeks,
+          weeksFactor: o.weeksFactor,
+          requires: parseJson<string[]>(o.requires, []),
+          conflicts: parseJson<string[]>(o.conflicts, []),
+          needsReview: o.needsReview,
+        })),
+      };
+    },
+    { groups: [], options: [] },
+  );
+}
+
+export type EstimateView = Omit<typeof estimates.$inferSelect, "selections" | "breakdown"> & {
+  selections: Record<string, string | string[]>;
+  breakdown: Line[];
+};
+
+/**
+ * Reads a saved estimate by its public reference.
+ *
+ * The stored figures are returned as written, never recomputed. A quote shown
+ * on Tuesday has to still say the same thing on Friday even if a feature was
+ * repriced on Wednesday — the selections are kept alongside so a stale one can
+ * be re-run deliberately, and the difference explained rather than applied
+ * behind someone's back.
+ */
+export async function getEstimate(publicId: string): Promise<EstimateView | null> {
+  return safeRead(
+    `estimate ${publicId}`,
+    async () => {
+      const [row] = await db
+        .select()
+        .from(estimates)
+        .where(eq(estimates.publicId, publicId))
+        .limit(1);
+      if (!row) return null;
+      return {
+        ...row,
+        selections: parseJson<Record<string, string | string[]>>(row.selections, {}),
+        breakdown: parseJson<Line[]>(row.breakdown, []),
+      };
+    },
+    null,
   );
 }
