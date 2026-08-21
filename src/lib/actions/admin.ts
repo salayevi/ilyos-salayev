@@ -5,12 +5,25 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { db } from "@/db";
-import { integrationSecrets, messages, orders, posts, products, projects, services, settings } from "@/db/schema";
+import {
+  integrationSecrets,
+  messages,
+  orders,
+  posts,
+  pricingOptions,
+  products,
+  projects,
+  serviceCatalog,
+  services,
+  settings,
+} from "@/db/schema";
 import { encryptIntegrationSecret } from "@/lib/integrations";
 import { captureScreenshot, dropAsset } from "@/lib/screenshot";
 import { readSession } from "@/lib/session";
 import { importFromUrl, type ImportedSource } from "@/lib/sources";
 import {
+  catalogPriceSchema,
+  optionPriceSchema,
   orderStatusSchema,
   integrationsSchema,
   leadNotesSchema,
@@ -503,4 +516,93 @@ export async function saveIntegrations(_prev: FormState, formData: FormData): Pr
     set: { encryptedValue: sql`excluded.encrypted_value`, updatedAt: sql`excluded.updated_at` },
   });
   return { ok: true };
+}
+
+// ------------------------------------------------------------------ pricing
+
+/**
+ * Reprices catalogue rows, several at a time.
+ *
+ * The screen submits every row it shows in one form rather than giving each a
+ * Save of its own. Repricing is almost never a single number — raising the
+ * landing floor usually means touching the tier above it too — and a page of
+ * eleven Save buttons invites saving three of them and leaving the rest.
+ *
+ * Rows that parse are written; a row that does not is skipped rather than
+ * failing the batch, so one bad field cannot discard the other ten edits.
+ */
+export async function saveCatalogPrices(formData: FormData) {
+  await requireAdmin();
+
+  const ids = formData.getAll("id").map(String);
+  let written = 0;
+
+  for (const raw of ids) {
+    const parsed = catalogPriceSchema.safeParse({
+      id: raw,
+      basePrice: formData.get(`basePrice_${raw}`),
+      minimumPrice: formData.get(`minimumPrice_${raw}`),
+      weeksMin: formData.get(`weeksMin_${raw}`),
+      weeksMax: formData.get(`weeksMax_${raw}`),
+      published: formData.get(`published_${raw}`) === "on",
+    });
+    if (!parsed.success) continue;
+
+    const d = parsed.data;
+    await db
+      .update(serviceCatalog)
+      .set({
+        basePrice: d.basePrice,
+        minimumPrice: d.minimumPrice,
+        // A max below the min would render as "8–4 hafta" on the public card.
+        weeksMin: Math.min(d.weeksMin, d.weeksMax),
+        weeksMax: Math.max(d.weeksMin, d.weeksMax),
+        published: d.published,
+        updatedAt: new Date(),
+      })
+      .where(eq(serviceCatalog.id, d.id));
+    written += 1;
+  }
+
+  if (written > 0) refreshPublic("/pricing");
+  revalidatePath("/admin/pricing", "page");
+}
+
+/** The same, for one step's worth of configurator options. */
+export async function savePricingOptions(formData: FormData) {
+  await requireAdmin();
+
+  const ids = formData.getAll("id").map(String);
+  let written = 0;
+
+  for (const raw of ids) {
+    const parsed = optionPriceSchema.safeParse({
+      id: raw,
+      amount: formData.get(`amount_${raw}`),
+      monthly: formData.get(`monthly_${raw}`),
+      externalMin: formData.get(`externalMin_${raw}`),
+      externalMax: formData.get(`externalMax_${raw}`),
+      weeks: formData.get(`weeks_${raw}`),
+      active: formData.get(`active_${raw}`) === "on",
+    });
+    if (!parsed.success) continue;
+
+    const d = parsed.data;
+    await db
+      .update(pricingOptions)
+      .set({
+        amount: d.amount,
+        monthly: d.monthly,
+        externalMin: Math.min(d.externalMin, d.externalMax),
+        externalMax: Math.max(d.externalMin, d.externalMax),
+        weeks: d.weeks,
+        active: d.active,
+        updatedAt: new Date(),
+      })
+      .where(eq(pricingOptions.id, d.id));
+    written += 1;
+  }
+
+  if (written > 0) refreshPublic("/pricing");
+  revalidatePath("/admin/pricing", "page");
 }

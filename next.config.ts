@@ -23,6 +23,19 @@ const nextConfig: NextConfig = {
         destination: "https://ilyos-salayev.site/:path*",
         permanent: true,
       },
+      {
+        /*
+          /services listed three engagement shapes with their own prices while
+          /pricing listed the catalogue with its own — the same work quoted two
+          ways depending on which page a buyer landed on. The catalogue won,
+          the old page is gone, and this is a 301 rather than a deletion
+          because the URL is in the sitemap and carries whatever authority it
+          has accrued.
+        */
+        source: "/services",
+        destination: "/pricing",
+        permanent: true,
+      },
     ];
   },
 };

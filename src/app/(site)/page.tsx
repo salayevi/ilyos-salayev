@@ -7,12 +7,13 @@ import { Photo } from "@/components/site/photo";
 import { ProductCard } from "@/components/site/product-card";
 import { ProjectCard } from "@/components/site/project-card";
 import { Reveal } from "@/components/site/reveal";
+import { formatMoney } from "@/lib/format";
 import {
+  getCatalog,
   getFeaturedProjects,
   getPosts,
-  getProjects,
   getProducts,
-  getServices,
+  getProjects,
   getSettings,
   getTestimonials,
 } from "@/lib/queries";
@@ -57,7 +58,7 @@ export default async function HomePage() {
       getSettings(),
       getFeaturedProjects(),
       getProjects({ onlyPublished: true }),
-      getServices({ onlyPublished: true }),
+      getCatalog({ onlyPublished: true }),
       getTestimonials(),
       getPosts({ onlyPublished: true }),
       getProducts({ onlyPublished: true }),
@@ -174,24 +175,43 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* ---------------- capabilities ---------------- */}
+      {/* ---------------- capabilities ----------------
+          Reads the catalogue, not the retired `services` table. This band and
+          /pricing now name the same work at the same starting figures, because
+          they are the same rows — which is the entire point of having replaced
+          two price lists with one. */}
       {services.length > 0 && (
         <section className="mx-auto max-w-[1440px] px-5 pt-16 md:px-10 md:pt-35 lg:px-20">
           <Reveal>
-            <h2 className="label text-[10px] md:text-xs">03 / Imkoniyatlar</h2>
+            <div className="flex items-baseline justify-between gap-6 border-b border-line pb-5">
+              <h2 className="label text-[10px] md:text-xs">03 / Imkoniyatlar</h2>
+              <Link
+                href="/pricing"
+                className="text-[13px] text-accent-text hover:text-crimson-100 md:text-[15px]"
+              >
+                Narxlarni ko&apos;rish &rarr;
+              </Link>
+            </div>
           </Reveal>
-          <div className="mt-5 grid gap-4 md:mt-9 md:grid-cols-3 md:gap-6">
-            {services.map((c, i) => (
+          <div className="mt-6 grid gap-4 md:mt-9 md:grid-cols-3 md:gap-6">
+            {services.slice(0, 6).map((c, i) => (
               <Reveal key={c.id} delay={i * 80}>
-                <article className="h-full rounded-[16px] border border-line bg-s1 p-6 md:p-10">
+                <Link
+                  href={c.kind === "project" ? `/pricing/${c.slug}` : "/pricing"}
+                  className="group flex h-full flex-col rounded-[16px] border border-line bg-s1 p-6 transition-colors hover:border-line-3 md:p-8"
+                >
                   <p className="font-mono text-xs text-accent-text">
                     {String(i + 1).padStart(2, "0")}
                   </p>
-                  <h3 className="mt-3.5 text-xl font-medium md:mt-5 md:text-2xl">{c.title}</h3>
+                  <h3 className="mt-3.5 text-xl font-medium md:mt-5 md:text-2xl">{c.name}</h3>
                   <p className="mt-2.5 text-[15px] leading-[1.72] text-ts md:mt-3.5 md:text-base">
-                    {c.description}
+                    {c.summary}
                   </p>
-                </article>
+                  <p className="mt-auto pt-5 font-mono text-[11px] text-tt">
+                    {formatMoney(c.basePrice, c.currency)}
+                    {c.kind === "project" ? " dan boshlab" : c.kind === "retainer" ? " / oy" : ""}
+                  </p>
+                </Link>
               </Reveal>
             ))}
           </div>

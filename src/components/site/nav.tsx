@@ -10,8 +10,7 @@ import { Availability } from "./availability";
 
 const LINKS = [
   { href: "/work", label: "Ishlar" },
-  { href: "/services", label: "Xizmatlar" },
-  { href: "/pricing", label: "Tariflar" },
+  { href: "/pricing", label: "Xizmatlar" },
   { href: "/tayyor-saytlar", label: "Tayyor saytlar" },
   { href: "/about", label: "Men haqimda" },
   { href: "/journal", label: "Jurnal" },
@@ -20,8 +19,7 @@ const LINKS = [
 const OPENING_COPY: Record<string, string> = {
   "/work": "Ishlar arxivi ochilmoqda",
   "/tayyor-saytlar": "Tayyor saytlar vitrinasiga kiring",
-  "/services": "Hamkorlik shakllari ochilmoqda",
-  "/pricing": "Uch chuqurlik ochilmoqda",
+  "/pricing": "Xizmatlar va narxlar ochilmoqda",
   "/about": "Muhandis ortidagi hikoya",
   "/journal": "Yozuvlar va kuzatuvlar",
   "/contact": "Suhbat uchun joy ochilmoqda",

@@ -397,3 +397,26 @@ export async function getEstimate(publicId: string): Promise<EstimateView | null
     null,
   );
 }
+
+/**
+ * The raw pricing rows, for the panel.
+ *
+ * Deliberately not `getPricingConfig`. That one returns the engine's shape —
+ * no row ids, inactive options already filtered out — which is exactly right
+ * for pricing a project and exactly wrong for editing one: the panel needs the
+ * id to write back, and needs to see a switched-off option in order to switch
+ * it on again.
+ */
+export async function getPricingRows() {
+  return safeRead(
+    "pricing rows",
+    async () => {
+      const [groupRows, optionRows] = await Promise.all([
+        db.select().from(pricingGroups).orderBy(asc(pricingGroups.position)),
+        db.select().from(pricingOptions).orderBy(asc(pricingOptions.position)),
+      ]);
+      return { groups: groupRows, options: optionRows };
+    },
+    { groups: [] as (typeof pricingGroups.$inferSelect)[], options: [] as (typeof pricingOptions.$inferSelect)[] },
+  );
+}

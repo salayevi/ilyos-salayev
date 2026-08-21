@@ -198,6 +198,34 @@ export const leadNotesSchema = z.object({
   notes: z.string().trim().max(4000).default(""),
 });
 
+/**
+ * One catalogue row as the panel edits it.
+ *
+ * Copy and structure stay out of this form on purpose — a name or a summary is
+ * a writing decision, and mixing it into the screen used for repricing turns a
+ * two-minute price change into a page of fields to scroll past.
+ */
+export const catalogPriceSchema = z.object({
+  id: z.coerce.number().int().positive(),
+  basePrice: money,
+  minimumPrice: money,
+  weeksMin: z.coerce.number().int().min(0).max(104).default(0),
+  weeksMax: z.coerce.number().int().min(0).max(104).default(0),
+  published: z.coerce.boolean().default(false),
+});
+
+/** One configurator option's numbers. */
+export const optionPriceSchema = z.object({
+  id: z.coerce.number().int().positive(),
+  /** Whole currency for `flat`; basis points for `multiplier`. */
+  amount: z.coerce.number().int().min(0).max(1_000_000).default(0),
+  monthly: money,
+  externalMin: money,
+  externalMax: money,
+  weeks: z.coerce.number().int().min(0).max(52).default(0),
+  active: z.coerce.boolean().default(false),
+});
+
 export const loginSchema = z.object({
   email: z.email("Email noto'g'ri"),
   password: z.string().min(1, "Parol kerak"),

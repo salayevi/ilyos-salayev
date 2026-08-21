@@ -19,6 +19,18 @@ export const metadata: Metadata = {
   },
 };
 
+/**
+ * Kept from the retired /services page. It answers the question the catalogue
+ * raises — "what actually happens after I pick one" — so it belongs next to
+ * the prices rather than on a page of its own that nobody had a reason to open.
+ */
+const PROCESS = [
+  { title: "Suhbat", body: "30 daqiqa. Muammoni tinglayman, taklif bermayman." },
+  { title: "Taklif", body: "Aniq natija, muddat va narx — bitta sahifada." },
+  { title: "Ish", body: "Haftalik demo, ochiq repozitoriy, qora quti yo'q." },
+  { title: "Topshirish", body: "Hujjat, test va bir oylik qo'llab-quvvatlash." },
+];
+
 const FAQ = [
   {
     q: "Nega yakuniy narx darhol ko'rsatilmaydi?",
@@ -188,7 +200,26 @@ export default async function PricingPage() {
 
       <section className="mx-auto max-w-[1440px] px-5 pt-16 md:px-10 md:pt-30 lg:px-20">
         <Reveal>
-          <h2 className="label text-[10px] md:text-xs">02 / Ko&apos;p so&apos;raladi</h2>
+          <h2 className="label text-[10px] md:text-xs">02 / Qanday ishlaymiz</h2>
+        </Reveal>
+        <ol className="mt-5 max-w-[760px] md:mt-7">
+          {PROCESS.map((step, i) => (
+            <li key={step.title} className="flex gap-4 border-b border-line py-4 md:gap-6 md:py-6">
+              <span className="pt-1 font-mono text-xs text-accent-text">
+                {String(i + 1).padStart(2, "0")}
+              </span>
+              <div>
+                <h3 className="text-[17px] font-medium md:text-xl">{step.title}</h3>
+                <p className="mt-1 text-sm text-tt md:text-base">{step.body}</p>
+              </div>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      <section className="mx-auto max-w-[1440px] px-5 pt-16 md:px-10 md:pt-30 lg:px-20">
+        <Reveal>
+          <h2 className="label text-[10px] md:text-xs">03 / Ko&apos;p so&apos;raladi</h2>
         </Reveal>
         <dl className="mt-6 max-w-[760px] md:mt-9">
           {FAQ.map((f) => (

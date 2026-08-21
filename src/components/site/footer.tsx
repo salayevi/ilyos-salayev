@@ -37,13 +37,8 @@ export function SiteFooter({ settings }: { settings: SiteSettings }) {
                 </Link>
               </li>
               <li>
-                <Link href="/services" className="hover:text-tp">
-                  Xizmatlar
-                </Link>
-              </li>
-              <li>
                 <Link href="/pricing" className="hover:text-tp">
-                  Tariflar
+                  Xizmatlar va narxlar
                 </Link>
               </li>
               <li>
