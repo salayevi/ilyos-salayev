@@ -226,6 +226,34 @@ export const optionPriceSchema = z.object({
   active: z.coerce.boolean().default(false),
 });
 
+/**
+ * Contact details attached to a saved estimate.
+ *
+ * Routing this through the contact form would have created a second record
+ * describing the same enquiry — a message saying "see EST-2026-…" beside an
+ * estimate that already carries the scope, the price and the buyer's own words.
+ * The estimate row has the fields; filling them is what turns it into a lead.
+ */
+export const estimateContactSchema = z.object({
+  publicId: z.string().trim().min(6).max(40),
+  name: z.string().trim().min(2, "Ismingizni yozing").max(80),
+  email: z.email("Email noto'g'ri").max(160),
+  phone: z.string().trim().max(40).default(""),
+  company: z.string().trim().max(120).default(""),
+  /** Honeypot — real people never fill a field they cannot see. */
+  website: z.string().max(0).optional().default(""),
+});
+
+export const estimateStatusSchema = z.object({
+  id: z.coerce.number().int().positive(),
+  status: z.enum(["draft", "submitted", "reviewing", "quoted", "accepted", "declined"]),
+});
+
+export const estimateNotesSchema = z.object({
+  id: z.coerce.number().int().positive(),
+  notes: z.string().trim().max(4000).default(""),
+});
+
 export const loginSchema = z.object({
   email: z.email("Email noto'g'ri"),
   password: z.string().min(1, "Parol kerak"),

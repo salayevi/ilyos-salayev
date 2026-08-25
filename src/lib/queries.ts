@@ -420,3 +420,51 @@ export async function getPricingRows() {
     { groups: [] as (typeof pricingGroups.$inferSelect)[], options: [] as (typeof pricingOptions.$inferSelect)[] },
   );
 }
+
+export const ESTIMATE_STAGES = [
+  { value: "submitted", label: "Yuborilgan", tone: "info" },
+  { value: "reviewing", label: "Ko'rib chiqilmoqda", tone: "neutral" },
+  { value: "quoted", label: "Taklif berildi", tone: "warn" },
+  { value: "accepted", label: "Qabul qilindi", tone: "ok" },
+  { value: "declined", label: "Rad etildi", tone: "bad" },
+  { value: "draft", label: "Yuborilmagan", tone: "neutral" },
+] as const;
+
+/**
+ * Estimates for the panel, newest first.
+ *
+ * Drafts are included but sort last. Someone who configured a project and left
+ * without sending it is not a lead, but the shape of what they were pricing is
+ * the most honest signal there is about what the catalogue is being asked for.
+ */
+export async function getEstimates(): Promise<EstimateView[]> {
+  return safeRead(
+    "estimates",
+    async () => {
+      const rows = await db.select().from(estimates).orderBy(desc(estimates.createdAt));
+      return rows
+        .map((row) => ({
+          ...row,
+          selections: parseJson<Record<string, string | string[]>>(row.selections, {}),
+          breakdown: parseJson<Line[]>(row.breakdown, []),
+        }))
+        .sort((a, b) => Number(a.status === "draft") - Number(b.status === "draft"));
+    },
+    [],
+  );
+}
+
+/** Unsent drafts do not count — the badge is for work waiting on a reply. */
+export async function getNewEstimateCount(): Promise<number> {
+  return safeRead(
+    "new estimate count",
+    async () => {
+      const [row] = await db
+        .select({ n: count() })
+        .from(estimates)
+        .where(eq(estimates.status, "submitted"));
+      return row?.n ?? 0;
+    },
+    0,
+  );
+}

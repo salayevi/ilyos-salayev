@@ -4,15 +4,18 @@ import { redirect } from "next/navigation";
 
 import { AdminNav } from "@/components/admin/shell";
 import { logout } from "@/lib/actions/auth";
-import { getNewOrderCount, getUnreadCount } from "@/lib/queries";
+import { getNewEstimateCount, getNewOrderCount, getUnreadCount } from "@/lib/queries";
 import { readSession } from "@/lib/session";
 
 export default async function DashLayout({ children }: { children: React.ReactNode }) {
   const session = await readSession();
   if (!session) redirect("/admin/login");
 
-  const unread = await getUnreadCount();
-  const newOrders = await getNewOrderCount();
+  const [unread, newOrders, newEstimates] = await Promise.all([
+    getUnreadCount(),
+    getNewOrderCount(),
+    getNewEstimateCount(),
+  ]);
 
   return (
     <div className="min-h-screen">
@@ -50,7 +53,7 @@ export default async function DashLayout({ children }: { children: React.ReactNo
       </header>
 
       <div className="mx-auto flex max-w-[1280px] flex-col px-4 md:flex-row md:gap-10 md:px-8 md:py-10">
-        <AdminNav unread={unread} newOrders={newOrders} />
+        <AdminNav unread={unread} newOrders={newOrders} newEstimates={newEstimates} />
         <main className="min-w-0 flex-1 py-6 md:py-0">
           <p className="sr-only">Kirgan: {session.name}</p>
           {children}

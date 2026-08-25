@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { EstimateContact } from "@/components/pricing/estimate-contact";
 import { formatMoneyExact as money } from "@/lib/format";
 import { getCatalogService, getEstimate, getPricingConfig } from "@/lib/queries";
 
@@ -154,13 +155,23 @@ export default async function EstimatePage({ params }: { params: Promise<{ id: s
         )}
       </div>
 
-      <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-        <Link
-          href={`/contact?hisob=${estimate.publicId}`}
-          className="inline-flex h-12 items-center justify-center rounded-lg bg-accent px-7 text-[15px] font-medium text-tp transition-colors hover:bg-accent-hover"
-        >
-          Loyihani boshlash
-        </Link>
+      {/* Already sent: the form would invite a duplicate, so the page just
+          says where things stand. */}
+      {estimate.status === "draft" ? (
+        <div className="mt-8">
+          <EstimateContact publicId={estimate.publicId} />
+        </div>
+      ) : (
+        <div className="mt-8 rounded-[16px] border border-ok bg-s1 p-6 md:p-8">
+          <p className="label text-[10px] text-ok">Yuborilgan</p>
+          <p className="mt-2 text-[15px] leading-[1.7] text-ts">
+            Bu hisob bo&apos;yicha so&apos;rov allaqachon yuborilgan
+            {estimate.name ? ` — ${estimate.name}` : ""}. Bir ish kuni ichida javob beraman.
+          </p>
+        </div>
+      )}
+
+      <div className="mt-6">
         <Link
           href={`/pricing/${estimate.serviceSlug}`}
           className="inline-flex h-12 items-center justify-center rounded-lg border border-line-2 px-7 text-[15px] font-medium transition-colors hover:border-line-3 hover:bg-s2"
@@ -168,12 +179,6 @@ export default async function EstimatePage({ params }: { params: Promise<{ id: s
           Qaytadan hisoblash
         </Link>
       </div>
-
-      <p className="mt-5 text-[13px] leading-[1.7] text-tt">
-        Bu hali buyurtma emas va hech qanday to&apos;lov talab qilmaydi. &laquo;Loyihani
-        boshlash&raquo; tugmasi shunchaki suhbatni ochadi — hisob raqami so&apos;rovga
-        biriktiriladi.
-      </p>
     </section>
   );
 }

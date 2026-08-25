@@ -2,14 +2,18 @@
 
 import { randomBytes } from "node:crypto";
 
+import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+
+import { eq } from "drizzle-orm";
 
 import { db } from "@/db";
 import { estimates } from "@/db/schema";
 import { calculate, type Selections } from "@/lib/pricing/engine";
 import { getCatalogService, getPricingConfig } from "@/lib/queries";
 import { checkRate, clientKey } from "@/lib/rate-limit";
+import { estimateContactSchema } from "@/lib/validators";
 
 /**
  * A reference a person can read out over the phone.
@@ -105,4 +109,76 @@ export async function saveEstimate(formData: FormData) {
   });
 
   redirect(`/hisob/${id}`);
+}
+
+export type EstimateContactState = {
+  status: "idle" | "error" | "success";
+  errors?: Partial<Record<"name" | "email", string>>;
+  message?: string;
+};
+
+/**
+ * Turns a saved estimate into a lead.
+ *
+ * Writes the contact details onto the estimate itself and moves it out of
+ * `draft`. The figures are left exactly as they were computed — this is the
+ * moment the quote becomes something both sides refer to, so recalculating it
+ * here would silently reprice the thing the buyer just agreed to send.
+ */
+export async function submitEstimate(
+  _prev: EstimateContactState,
+  formData: FormData,
+): Promise<EstimateContactState> {
+  const rate = checkRate(clientKey(await headers(), "estimate-submit"), 10);
+  if (!rate.allowed) {
+    return { status: "error", message: "Juda ko'p urinish. Biroz kutib, qayta yuboring." };
+  }
+
+  const parsed = estimateContactSchema.safeParse({
+    publicId: formData.get("publicId") ?? "",
+    name: formData.get("name") ?? "",
+    email: formData.get("email") ?? "",
+    phone: formData.get("phone") ?? "",
+    company: formData.get("company") ?? "",
+    website: formData.get("website") ?? "",
+  });
+
+  if (!parsed.success) {
+    const errors: NonNullable<EstimateContactState["errors"]> = {};
+    for (const issue of parsed.error.issues) {
+      const field = issue.path[0];
+      if (field === "name" || field === "email") errors[field] ??= issue.message;
+    }
+    return {
+      status: "error",
+      errors,
+      message: Object.keys(errors).length ? undefined : "Yuborilmadi. Qayta urinib ko'ring.",
+    };
+  }
+
+  const d = parsed.data;
+  const [row] = await db
+    .select({ id: estimates.id, status: estimates.status })
+    .from(estimates)
+    .where(eq(estimates.publicId, d.publicId))
+    .limit(1);
+
+  if (!row) return { status: "error", message: "Bu hisob topilmadi." };
+  // Re-sending after the conversation has already moved on would drag the
+  // estimate backwards through the pipeline; the details still update.
+  const nextStatus = row.status === "draft" ? "submitted" : row.status;
+
+  await db
+    .update(estimates)
+    .set({
+      name: d.name,
+      email: d.email,
+      phone: d.phone,
+      company: d.company,
+      status: nextStatus,
+    })
+    .where(eq(estimates.id, row.id));
+
+  revalidatePath("/admin/estimates", "page");
+  return { status: "success" };
 }

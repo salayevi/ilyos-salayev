@@ -9,6 +9,7 @@ const NAV = [
   { href: "/admin/store", label: "Tayyor saytlar" },
   { href: "/admin/orders", label: "Buyurtmalar", badge: "orders" },
   { href: "/admin/analytics", label: "Tashriflar" },
+  { href: "/admin/estimates", label: "Hisoblar", badge: "estimates" },
   { href: "/admin/pricing", label: "Narxlar" },
   { href: "/admin/services", label: "Xizmatlar (eski)" },
   { href: "/admin/journal", label: "Jurnal" },
@@ -16,7 +17,15 @@ const NAV = [
   { href: "/admin/settings", label: "Sozlamalar" },
 ] as const;
 
-export function AdminNav({ unread, newOrders }: { unread: number; newOrders: number }) {
+export function AdminNav({
+  unread,
+  newOrders,
+  newEstimates,
+}: {
+  unread: number;
+  newOrders: number;
+  newEstimates: number;
+}) {
   const pathname = usePathname();
   const isOn = (href: string, exact?: boolean) =>
     exact ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
@@ -34,7 +43,13 @@ export function AdminNav({ unread, newOrders }: { unread: number; newOrders: num
         {NAV.map((n) => {
           const on = isOn(n.href, "exact" in n ? n.exact : false);
           const badge =
-            "badge" in n ? (n.badge === "messages" ? unread : newOrders) : 0;
+            "badge" in n
+              ? n.badge === "messages"
+                ? unread
+                : n.badge === "estimates"
+                  ? newEstimates
+                  : newOrders
+              : 0;
           return (
             <li key={n.href}>
               <Link

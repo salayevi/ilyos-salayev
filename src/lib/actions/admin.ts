@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 
 import { db } from "@/db";
 import {
+  estimates,
   integrationSecrets,
   messages,
   orders,
@@ -23,6 +24,8 @@ import { readSession } from "@/lib/session";
 import { importFromUrl, type ImportedSource } from "@/lib/sources";
 import {
   catalogPriceSchema,
+  estimateNotesSchema,
+  estimateStatusSchema,
   optionPriceSchema,
   orderStatusSchema,
   integrationsSchema,
@@ -605,4 +608,40 @@ export async function savePricingOptions(formData: FormData) {
 
   if (written > 0) refreshPublic("/pricing");
   revalidatePath("/admin/pricing", "page");
+}
+
+export async function setEstimateStatus(formData: FormData) {
+  await requireAdmin();
+  const parsed = estimateStatusSchema.safeParse({
+    id: formData.get("id"),
+    status: formData.get("status"),
+  });
+  if (!parsed.success) return;
+  await db
+    .update(estimates)
+    .set({ status: parsed.data.status })
+    .where(eq(estimates.id, parsed.data.id));
+  revalidatePath("/admin/estimates", "page");
+}
+
+export async function saveEstimateNotes(formData: FormData) {
+  await requireAdmin();
+  const parsed = estimateNotesSchema.safeParse({
+    id: formData.get("id"),
+    notes: formData.get("notes"),
+  });
+  if (!parsed.success) return;
+  await db
+    .update(estimates)
+    .set({ notes: parsed.data.notes })
+    .where(eq(estimates.id, parsed.data.id));
+  revalidatePath("/admin/estimates", "page");
+}
+
+export async function deleteEstimate(formData: FormData) {
+  await requireAdmin();
+  const id = rowId(formData);
+  if (id === null) return;
+  await db.delete(estimates).where(eq(estimates.id, id));
+  revalidatePath("/admin/estimates", "page");
 }
