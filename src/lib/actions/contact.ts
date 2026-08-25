@@ -23,7 +23,7 @@ export async function submitMessage(
   // The honeypot stops the crude bots; this stops the one that found the
   // action endpoint and posts to it directly. Ten enquiries in fifteen minutes is far
   // more than a real person sends and far less than a script wants.
-  const rate = checkRate(clientKey(await headers(), "contact"), 10);
+  const rate = await checkRate(clientKey(await headers(), "contact"), 10);
   if (!rate.allowed) {
     return {
       status: "error",

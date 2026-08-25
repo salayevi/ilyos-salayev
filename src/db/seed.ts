@@ -336,9 +336,33 @@ const POSTS = [
   },
 ];
 
+/**
+ * Owner credentials, or nothing.
+ *
+ * These used to fall back to a hard-coded address and the password
+ * `obsidian-2026`. That string is in the git history, in the README and in
+ * every copy of this repository, so any deployment seeded without the
+ * variables set shipped with a publicly known administrator login — and
+ * silently, because the seed reported success.
+ *
+ * Fail closed instead. A seed that cannot create a safe owner creates none and
+ * says why; every other table still fills, so the site is usable and only the
+ * panel waits for a decision.
+ */
+function ownerCredentials(): { email: string; password: string } | null {
+  const email = process.env.ADMIN_EMAIL?.trim();
+  const password = process.env.ADMIN_PASSWORD;
+
+  if (!email || !password) return null;
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return null;
+  // Short enough to brute-force is the same as absent, and the seed is the
+  // last place that can refuse it.
+  if (password.length < 12) return null;
+  return { email, password };
+}
+
 async function main() {
-  const email = process.env.ADMIN_EMAIL ?? "salayevi782@gmail.com";
-  const password = process.env.ADMIN_PASSWORD ?? "obsidian-2026";
+  const owner = ownerCredentials();
 
   // Each table is checked on its own rather than gating everything behind one
   // "is the database empty" test: a schema that grew a table after the first
@@ -355,9 +379,17 @@ async function main() {
     seeded.push(name);
   };
 
-  await fill("admins", await db.select().from(admins), () =>
-    db.insert(admins).values({ email, name: "Ilyos Salayev", passwordHash: hashPassword(password) }),
-  );
+  if (owner) {
+    await fill("admins", await db.select().from(admins), () =>
+      db.insert(admins).values({
+        email: owner.email,
+        name: "Ilyos Salayev",
+        passwordHash: hashPassword(owner.password),
+      }),
+    );
+  } else {
+    skipped.push("admins (ADMIN_EMAIL/ADMIN_PASSWORD yo'q)");
+  }
 
   await fill("projects", await db.select().from(projects), () =>
     db.insert(projects).values(PROJECTS),
@@ -410,7 +442,7 @@ async function main() {
     aboutTitle: "Men muammoni kodga emas, natijaga aylantiraman.",
     aboutBody:
       "Olti yildan beri ovoz, xotira va real vaqt tizimlari ustida ishlayman. Ko'p vaqtimni tezlik va aniqlik o'rtasidagi chegarani topishga sarflayman — chunki foydalanuvchi ikkalasini ham sezadi.\n\nToshkentda yashayman, masofadan ishlayman. O'zbek, rus va ingliz tillarida.",
-    email,
+    email: owner?.email ?? "salayevi782@gmail.com",
     telegram: "@ilyos",
     github: "https://github.com/salayevi",
     linkedin: "https://linkedin.com/in/ilyos-salayev",
@@ -467,8 +499,16 @@ async function main() {
     console.log(`  O'tkazib yuborildi (ma'lumot bor): ${skipped.join(", ")}`);
   }
   if (seeded.includes("admins")) {
-    console.log(`  Admin: ${email}`);
-    console.log(`  Parol: ${password}`);
+    // The address is echoed so the operator knows which account exists. The
+    // password is not: they supplied it, it is in their environment, and a
+    // secret printed to a terminal ends up in a scrollback buffer and a CI log.
+    console.log(`  Admin yaratildi: ${owner?.email}`);
+  }
+  if (!owner) {
+    console.log("");
+    console.log("  ADMIN YARATILMADI.");
+    console.log("  ADMIN_EMAIL va ADMIN_PASSWORD (kamida 12 belgi) o'rnatilmagan.");
+    console.log("  Standart parol ataylab olib tashlandi — u repozitoriy tarixida qolgan.");
   }
 }
 

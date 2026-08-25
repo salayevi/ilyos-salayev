@@ -24,6 +24,19 @@ export type OrderState = {
 
 export type TelegramConfirmState = { ok?: boolean; error?: string };
 
+/**
+ * How long a hold survives without becoming an order.
+ *
+ * The buyer still has to send a Telegram message and come back to confirm, so
+ * the window has to outlast a distraction. Thirty minutes is long enough for
+ * that and short enough that a listing abandoned at lunchtime is buyable again
+ * before the afternoon.
+ */
+const RESERVATION_MINUTES = 30;
+
+/** Thrown inside the transaction so the rollback and the message share a path. */
+class ListingTaken extends Error {}
+
 function tokenHash(token: string) {
   return createHash("sha256").update(token).digest("hex");
 }
@@ -122,28 +135,62 @@ export async function placeOrder(_prev: OrderState, formData: FormData): Promise
       };
     }
 
-    // One conditional write claims the listing before the order is written.
-    // Two buyers can never both pass this update, even from separate devices.
-    const [reserved] = await db
-      .update(products)
-      .set({ status: "reserved", updatedAt: new Date() })
-      .where(and(eq(products.id, row.id), eq(products.status, "available"), eq(products.published, true)))
-      .returning({ id: products.id });
-    if (!reserved) return { status: "error", message: "Bu sayt hozir band qilingan" };
+    /*
+      Claiming the listing and writing the order are one transaction.
 
-    const [order] = await db.insert(orders).values({
-      kind: "product",
-      productId: row.id,
-      serviceTitle: row.title,
-      amount: row.price,
-      currency: row.currency,
-      name: d.name,
-      email: d.email,
-      phone: d.phone,
-      brief: d.brief,
-      preferredStart: d.preferredStart,
-      customerTokenHash,
-    }).returning({ id: orders.id });
+      The conditional update alone is already safe against two buyers — the
+      `where status = 'available'` makes it a compare-and-swap that only one
+      caller can win. What it did not survive was the insert failing
+      afterwards: the listing stayed `reserved` with no order behind it, and
+      nothing in the system would ever release it again. A rolled-back
+      transaction puts the shelf back the way it was found.
+    */
+    let order: { id: number } | undefined;
+    try {
+      order = await db.transaction(async (tx) => {
+        const [claimed] = await tx
+          .update(products)
+          .set({
+            status: "reserved",
+            reservedUntil: new Date(Date.now() + RESERVATION_MINUTES * 60_000),
+            updatedAt: new Date(),
+          })
+          .where(
+            and(
+              eq(products.id, row.id),
+              eq(products.status, "available"),
+              eq(products.published, true),
+            ),
+          )
+          .returning({ id: products.id });
+        if (!claimed) throw new ListingTaken();
+
+        const [created] = await tx
+          .insert(orders)
+          .values({
+            kind: "product",
+            productId: row.id,
+            serviceTitle: row.title,
+            amount: row.price,
+            currency: row.currency,
+            name: d.name,
+            email: d.email,
+            phone: d.phone,
+            brief: d.brief,
+            preferredStart: d.preferredStart,
+            customerTokenHash,
+          })
+          .returning({ id: orders.id });
+        return created;
+      });
+    } catch (error) {
+      if (error instanceof ListingTaken) {
+        return { status: "error", message: "Bu sayt hozir band qilingan" };
+      }
+      console.error("[orders] buyurtma yozib bo'lmadi:", error);
+      return { status: "error", message: "Buyurtma saqlanmadi. Qayta urinib ko'ring." };
+    }
+    if (!order) return { status: "error", message: "Buyurtma saqlanmadi. Qayta urinib ko'ring." };
     const message = telegramMessage({ orderId: order.id, title: row.title, kind, amount: row.price, currency: row.currency, ...d });
     return {
       status: "success",

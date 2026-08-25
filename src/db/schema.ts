@@ -334,6 +334,15 @@ export const products = pgTable(
     category: text("category").notNull().default("Biznes"),
     /** available · reserved · sold */
     status: text("status").notNull().default("available"),
+    /**
+     * When a `reserved` hold lapses.
+     *
+     * Without it a listing that was claimed and then abandoned — the buyer
+     * closed the tab, the order insert failed — stays unbuyable forever, and
+     * the only way back is a manual edit. Reads release anything past this
+     * instant, so the shelf repairs itself rather than needing a cron.
+     */
+    reservedUntil: timestamp("reserved_until", { withTimezone: true }),
     featured: boolean("featured").notNull().default(false),
     published: boolean("published").notNull().default(true),
     position: integer("position").notNull().default(0),
@@ -520,6 +529,27 @@ export const assets = pgTable("assets", {
   ...stamps,
 });
 
+/**
+ * Rate-limit counters, shared across instances.
+ *
+ * The first implementation kept these in process memory, which on a serverless
+ * platform means each warm instance counts separately and a cold start forgets
+ * everything — an attacker spread across instances gets a multiple of the
+ * budget. A row per key is slower by one query and correct by construction.
+ *
+ * `resetAt` in the past means the window has lapsed; the row is reused rather
+ * than deleted, so a busy key never churns.
+ */
+export const rateLimits = pgTable(
+  "rate_limits",
+  {
+    key: text("key").primaryKey(),
+    count: integer("count").notNull().default(0),
+    resetAt: timestamp("reset_at", { withTimezone: true }).notNull(),
+  },
+  (t) => [index("rate_limits_reset_idx").on(t.resetAt)],
+);
+
 /** Single-row key/value store for editable site copy. */
 export const settings = pgTable("settings", {
   key: text("key").primaryKey(),
@@ -541,3 +571,4 @@ export type CatalogService = typeof serviceCatalog.$inferSelect;
 export type PricingGroup = typeof pricingGroups.$inferSelect;
 export type PricingOption = typeof pricingOptions.$inferSelect;
 export type Estimate = typeof estimates.$inferSelect;
+export type RateLimit = typeof rateLimits.$inferSelect;

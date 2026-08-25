@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, asc, count, desc, eq } from "drizzle-orm";
+import { and, asc, count, desc, eq, lte } from "drizzle-orm";
 
 import { db } from "@/db";
 import {
@@ -130,7 +130,36 @@ function toProductView(row: typeof products.$inferSelect): ProductView {
   };
 }
 
+/**
+ * Puts lapsed holds back on the shelf.
+ *
+ * Called from the reads that display listings rather than from a scheduler:
+ * this deployment has no cron, and a reservation only matters at the moment
+ * someone is looking at the thing it blocks. `sold` is never touched — that is
+ * a terminal state and no timer may undo it.
+ *
+ * A failure here is logged and swallowed. Not releasing a stale hold shows one
+ * listing as unavailable for a while; throwing would take the whole shop page
+ * down instead.
+ */
+export async function releaseExpiredReservations(): Promise<number> {
+  try {
+    const released = await db
+      .update(products)
+      .set({ status: "available", reservedUntil: null, updatedAt: new Date() })
+      .where(and(eq(products.status, "reserved"), lte(products.reservedUntil, new Date())))
+      .returning({ id: products.id });
+    return released.length;
+  } catch (error) {
+    console.error("[inventory] eskirgan rezervni bo'shatib bo'lmadi:", error);
+    return 0;
+  }
+}
+
 export async function getProducts(opts: { onlyPublished?: boolean } = {}): Promise<ProductView[]> {
+  // Sweep before reading, so a listing whose hold lapsed a minute ago is on
+  // sale in the same render rather than the next one.
+  await releaseExpiredReservations();
   return safeRead("products", async () => {
     const base = db.select().from(products).$dynamic();
     const rows = await (opts.onlyPublished

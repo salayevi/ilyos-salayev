@@ -19,7 +19,7 @@ export async function login(_prev: LoginState, formData: FormData): Promise<Logi
   // Counted before the password is checked, so a guess costs an attempt whether
   // or not it was close. Checking after would let an attacker probe for free by
   // sending malformed input.
-  const verdict = checkRate(key, 6);
+  const verdict = await checkRate(key, 6);
   if (!verdict.allowed) {
     const minutes = Math.ceil(verdict.retryAfterSeconds / 60);
     return { error: `Juda ko'p urinish. ${minutes} daqiqadan keyin qayta urining.` };
@@ -38,7 +38,7 @@ export async function login(_prev: LoginState, formData: FormData): Promise<Logi
   const [admin] = await db.select().from(admins).where(eq(admins.email, parsed.data.email)).limit(1);
   if (!admin || !verifyPassword(parsed.data.password, admin.passwordHash)) return generic;
 
-  clearRate(key);
+  await clearRate(key);
   await createSession({ id: admin.id, email: admin.email, name: admin.name });
   redirect("/admin");
 }

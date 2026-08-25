@@ -53,6 +53,22 @@ export function Reveal({
   const reduced = useReducedMotion();
   const ref = useRef<HTMLDivElement>(null);
 
+  /*
+    Stand the deadline down.
+
+    The inline script in the root layout arms a timer that releases every
+    hidden element after four seconds. Reaching this effect proves the bundle
+    loaded and React hydrated, which is exactly the condition the timer exists
+    to detect the absence of.
+  */
+  useEffect(() => {
+    const w = window as Window & { __revealFailsafe?: ReturnType<typeof setTimeout> };
+    if (w.__revealFailsafe) {
+      clearTimeout(w.__revealFailsafe);
+      w.__revealFailsafe = undefined;
+    }
+  }, []);
+
   useEffect(() => {
     const el = ref.current;
     if (!el || !cinema || reduced) {

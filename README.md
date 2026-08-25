@@ -1,7 +1,7 @@
-# OBSIDIAN — Ilyos Salayev portfolio
+# IS DRAGON — Ilyos Salayev portfolio
 
-Kinematik shaxsiy portfolio va uni to'liq boshqaradigan admin panel.
-Qorong'u rejim, oltin aksent, mobil-birinchi tuzilma.
+Kinematik shaxsiy portfolio, loyiha narxlash konfiguratori va ularning
+hammasini boshqaradigan panel. Qora × qirmizi, mobil-birinchi tuzilma.
 
 **Stack:** Next.js 16 (App Router) · React 19 · TypeScript 5 · Tailwind CSS 4 ·
 Drizzle ORM + PostgreSQL · Zod 4 · jose (JWT sessiya)
@@ -23,9 +23,10 @@ npm run dev
 
 Sayt: <http://localhost:3000> · Panel: <http://localhost:3000/admin>
 
-Seed yaratadigan birinchi admin `ADMIN_EMAIL` / `ADMIN_PASSWORD` dan olinadi
-(`.env.example` da namunasi bor). **Ishlab chiqarishga chiqarishdan oldin
-parolni albatta almashtiring.**
+Seed birinchi adminni **faqat** `ADMIN_EMAIL` va `ADMIN_PASSWORD` (kamida 12
+belgi) berilgan bo'lsa yaratadi. Ular yo'q bo'lsa admin yaratilmaydi va seed
+buni aniq aytadi — standart parol ataylab olib tashlangan, chunki u
+repozitoriy tarixida qolgan.
 
 ## Skriptlar
 
@@ -38,6 +39,7 @@ parolni albatta almashtiring.**
 | `npm run db:generate` | Sxema o'zgarganda migratsiya yaratadi |
 | `npm run db:migrate` | Migratsiyalarni bazaga qo'llaydi |
 | `npm run db:seed` | Bo'sh bazani to'ldiradi (mavjud ma'lumotga tegmaydi) |
+| `npm test` | Narx mexanizmi, pul formati va inventar qoidalari testlari |
 
 ## Tuzilma
 
@@ -126,8 +128,12 @@ eskisi o'chiriladi, shuning uchun `/api/shot/<id>` `immutable` bilan keshlanadi.
 
 Ikkita, bitta `orders` jadvalida (`kind` ustuni ajratadi):
 
-1. **Xizmat tariflari** — `/services` sahifasida narx bilan, har bir tarif ostida
-   o'z buyurtma formasi.
+1. **Loyiha ishlab chiqish** — `/pricing` katalogi. Har bir yo'nalishning
+   boshlang'ich narxi ochiq, yakuniy narxni `/pricing/[slug]` dagi konfigurator
+   hisoblaydi va nimadan tashkil topganini qatorma-qator ko'rsatadi. Natija
+   `EST-YYYY-XXXXXX` raqamli hisob sifatida saqlanadi va aloqa ma'lumoti
+   qo'shilganda lead'ga aylanadi. Eski `/services` sahifasi `/pricing` ga 301
+   bilan yo'naltiriladi.
 2. **Tayyor saytlar** — `/tayyor-saytlar` do'koni: demo havolasi, ekran surati,
    narx, «nima kiradi» ro'yxati va sotib olish so'rovi. Holati `available` ·
    `reserved` · `sold`.

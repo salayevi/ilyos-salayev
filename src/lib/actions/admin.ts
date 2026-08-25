@@ -1,6 +1,6 @@
 "use server";
 
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -298,6 +298,24 @@ export async function deleteProduct(formData: FormData) {
 
 // ------------------------------------------------------------------- orders
 
+/**
+ * Which shelf state each order state implies.
+ *
+ * These two used to move independently, so an order could be marked paid while
+ * the listing it was for sat in `reserved` — or, worse, be declined while the
+ * listing stayed held, which is how a ready-made site quietly stops being for
+ * sale. `null` means the order state says nothing about inventory and the
+ * listing is left exactly as it is.
+ */
+const ORDER_TO_LISTING: Record<string, "sold" | "reserved" | "available" | null> = {
+  new: "reserved",
+  contacted: "reserved",
+  scheduled: "reserved",
+  paid: "sold",
+  done: "sold",
+  declined: "available",
+};
+
 export async function setOrderStatus(formData: FormData) {
   await requireAdmin();
   const id = rowId(formData);
@@ -306,15 +324,61 @@ export async function setOrderStatus(formData: FormData) {
   const parsed = orderStatusSchema.safeParse(formData.get("status"));
   if (!parsed.success) return;
 
-  await db.update(orders).set({ status: parsed.data }).where(eq(orders.id, id));
+  // One transaction: an order that says "paid" beside a listing that still
+  // says "available" is the kind of disagreement nobody notices until the
+  // same site is sold twice.
+  await db.transaction(async (tx) => {
+    const [order] = await tx
+      .update(orders)
+      .set({ status: parsed.data })
+      .where(eq(orders.id, id))
+      .returning({ productId: orders.productId, kind: orders.kind });
+
+    if (!order || order.kind !== "product" || order.productId === null) return;
+    const next = ORDER_TO_LISTING[parsed.data];
+    if (!next) return;
+
+    await tx
+      .update(products)
+      .set({
+        status: next,
+        // A sold listing keeps no hold; a released one keeps no deadline.
+        reservedUntil: next === "reserved" ? new Date(Date.now() + 30 * 60_000) : null,
+        updatedAt: new Date(),
+      })
+      .where(eq(products.id, order.productId));
+  });
+
+  refreshPublic("/tayyor-saytlar");
   revalidatePath("/admin/orders", "page");
 }
 
+/**
+ * Deletes an order and releases whatever it was holding.
+ *
+ * Deleting used to leave the listing wherever the order had put it, so removing
+ * a cancelled order was the fastest way to make a site permanently unbuyable.
+ * A sold listing is left sold: the order record going away does not un-sell it.
+ */
 export async function deleteOrder(formData: FormData) {
   await requireAdmin();
   const id = rowId(formData);
   if (id === null) return;
-  await db.delete(orders).where(eq(orders.id, id));
+
+  await db.transaction(async (tx) => {
+    const [order] = await tx
+      .delete(orders)
+      .where(eq(orders.id, id))
+      .returning({ productId: orders.productId, kind: orders.kind });
+
+    if (!order || order.kind !== "product" || order.productId === null) return;
+    await tx
+      .update(products)
+      .set({ status: "available", reservedUntil: null, updatedAt: new Date() })
+      .where(and(eq(products.id, order.productId), eq(products.status, "reserved")));
+  });
+
+  refreshPublic("/tayyor-saytlar");
   revalidatePath("/admin/orders", "page");
 }
 

@@ -179,6 +179,18 @@
    ways instead of firing once. The transitions below stay for the fallback
    path, where `.in` is simply added. */
 .reveal {
+  /*
+    Visible by default. The hidden state is applied only once JavaScript has
+    proved it is running and the reveal system has had a chance to start.
+
+    This was the other way round: the CSS hid the content and JavaScript was
+    trusted to bring it back. Any failure in that chain — scripting disabled, a
+    blocked bundle, an exception during hydration — left an entirely blank page
+    that still returned 200 and still had every word in the HTML.
+  */
+  opacity: 1;
+}
+html.js:not(.reveal-failsafe) .reveal {
   opacity: 0;
   clip-path: inset(8% 0 0 round 16px);
   filter: blur(10px);
@@ -189,11 +201,23 @@
     filter 0.8s var(--ease-cinematic),
     transform 0.9s var(--ease-cinematic);
 }
-.reveal.in {
+html.js .reveal.in {
   opacity: 1;
   clip-path: inset(0 round 16px);
   filter: blur(0);
   transform: scale(1);
+}
+
+/*
+  The deadline. If the reveal system has not reported for duty, every hidden
+  element is released at once — a page that appears without its choreography is
+  a smaller loss than a page that never appears.
+*/
+html.reveal-failsafe .reveal {
+  opacity: 1;
+  clip-path: none;
+  filter: none;
+  transform: none;
 }
 
 /* Navigation: a rule drawn under the destination, from the side the eye
@@ -225,7 +249,8 @@
   html {
     scroll-behavior: auto;
   }
-  .reveal {
+  html.js .reveal,
+  html.js .reveal.in {
     opacity: 1;
     clip-path: none;
     filter: none;

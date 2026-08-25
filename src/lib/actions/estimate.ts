@@ -56,7 +56,7 @@ function parseSelections(raw: string): Selections {
  * derived from data only the server controls.
  */
 export async function saveEstimate(formData: FormData) {
-  const rate = checkRate(clientKey(await headers(), "estimate"), 20);
+  const rate = await checkRate(clientKey(await headers(), "estimate"), 20);
   if (!rate.allowed) redirect("/pricing?xato=limit");
 
   const slug = String(formData.get("service") ?? "").trim();
@@ -129,7 +129,7 @@ export async function submitEstimate(
   _prev: EstimateContactState,
   formData: FormData,
 ): Promise<EstimateContactState> {
-  const rate = checkRate(clientKey(await headers(), "estimate-submit"), 10);
+  const rate = await checkRate(clientKey(await headers(), "estimate-submit"), 10);
   if (!rate.allowed) {
     return { status: "error", message: "Juda ko'p urinish. Biroz kutib, qayta yuboring." };
   }

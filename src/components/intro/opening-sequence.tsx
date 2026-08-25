@@ -140,6 +140,10 @@ export function OpeningSequence() {
     }
   };
 
+  /** Tears down the stall guard; set when playback starts. */
+  const guardRef = useRef<(() => void) | null>(null);
+  const skipRef = useRef<(() => void) | null>(null);
+
   const releaseLandscape = useCallback(() => {
     try {
       (screen.orientation as ScreenOrientation & { unlock?: () => void }).unlock?.();
@@ -157,6 +161,48 @@ export function OpeningSequence() {
     setStage("playing");
     void warmHero();
 
+    /*
+      The way out when the film never arrives.
+
+      Everything below is best-effort: `play()` can be refused, a video can
+      stall mid-buffer on a bad connection, and a `<video>` that never fires
+      `ended` leaves the sequence waiting forever behind a full-screen overlay
+      with the site unreachable underneath. Escape and the skip button already
+      existed, but both require the visitor to work out that the thing is
+      broken and that leaving is their job.
+
+      This gives up on their behalf. The window is generous — longer than the
+      film — so a slow but working connection is never cut off; it only fires
+      when nothing is going to happen at all. `timeupdate` proves frames are
+      actually advancing, which a `canplay` that never progresses does not.
+    */
+    let lastProgress = Date.now();
+    const onProgress = () => {
+      lastProgress = Date.now();
+    };
+    video.addEventListener("timeupdate", onProgress);
+
+    const guard = window.setInterval(() => {
+      // Stalled for eight seconds with no frame advance, or refused outright.
+      if (Date.now() - lastProgress > 8000) {
+        window.clearInterval(guard);
+        video.removeEventListener("timeupdate", onProgress);
+        console.warn("[intro] media javob bermadi — sahna o'tkazib yuborildi");
+        skipRef.current?.();
+      }
+    }, 1000);
+
+    const stop = () => {
+      window.clearInterval(guard);
+      video.removeEventListener("timeupdate", onProgress);
+    };
+    video.addEventListener("ended", stop, { once: true });
+    video.addEventListener("error", () => {
+      stop();
+      skipRef.current?.();
+    }, { once: true });
+    guardRef.current = stop;
+
     // Same tick, same gesture — browsers only unlock media inside the click
     // handler, and starting them in separate ticks is how you get audio a beat
     // behind picture.
@@ -170,11 +216,19 @@ export function OpeningSequence() {
   };
 
   const skip = useCallback(() => {
+    guardRef.current?.();
+    guardRef.current = null;
     videoRef.current?.pause();
     audioRef.current?.pause();
     releaseLandscape();
     setDismissed(true);
   }, [releaseLandscape]);
+
+  // `start` is declared above `skip` and needs to call it; a ref breaks the
+  // cycle without reordering the file or widening either one's dependencies.
+  useEffect(() => {
+    skipRef.current = skip;
+  }, [skip]);
 
   useEffect(() => {
     if (phase !== "idle") return;

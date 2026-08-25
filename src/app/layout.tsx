@@ -1,18 +1,50 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono, Instrument_Serif } from "next/font/google";
+import localFont from "next/font/local";
 
 import { KEYWORDS, SITE_NAME, SITE_URL } from "@/lib/seo";
 
 import "./globals.css";
 
-const geist = Geist({ subsets: ["latin"], variable: "--font-geist", display: "swap" });
-const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-geist-mono", display: "swap" });
-const instrument = Instrument_Serif({
-  subsets: ["latin"],
-  weight: "400",
-  style: ["normal", "italic"],
+/*
+  Self-hosted, not fetched.
+
+  `next/font/google` downloads the face at build time, which quietly made a
+  production build require internet access to Google's CDN — an offline machine,
+  a locked-down CI runner or a Google outage all turned into a failed deploy of
+  a site that has nothing to do with Google. The files below are the exact same
+  latin subsets that loader was fetching, committed to the repository.
+
+  `next/font/local` still does the work that matters: it hashes and serves the
+  files from our own origin, generates the `@font-face` rules, and computes the
+  fallback metrics that keep the layout from shifting when the face arrives.
+*/
+const geist = localFont({
+  src: "./fonts/Geist-Variable.woff2",
+  weight: "100 900",
+  variable: "--font-geist",
+  display: "swap",
+  // Measured against the real face so the fallback occupies the same space.
+  adjustFontFallback: "Arial",
+  fallback: ["ui-sans-serif", "system-ui", "sans-serif"],
+});
+
+const geistMono = localFont({
+  src: "./fonts/GeistMono-Variable.woff2",
+  weight: "100 900",
+  variable: "--font-geist-mono",
+  display: "swap",
+  fallback: ["ui-monospace", "Menlo", "monospace"],
+});
+
+const instrument = localFont({
+  src: [
+    { path: "./fonts/InstrumentSerif-Regular.woff2", weight: "400", style: "normal" },
+    { path: "./fonts/InstrumentSerif-Italic.woff2", weight: "400", style: "italic" },
+  ],
   variable: "--font-instrument-serif",
   display: "swap",
+  adjustFontFallback: "Times New Roman",
+  fallback: ["Didot", "Georgia", "serif"],
 });
 
 const siteUrl = SITE_URL;
@@ -102,6 +134,27 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         extension's doing, not ours. Suppressing here covers only this element's
         own attributes; children still hydrate strictly.
       */}
+      {/*
+        Two jobs, before anything else paints.
+
+        `js` switches the reveal system on. The stylesheet keeps content visible
+        until this class exists, so scripting being off or the bundle failing to
+        load leaves a readable page instead of a blank one.
+
+        The timer is the deadline. If the reveal system has not cleared it —
+        because hydration threw, the chunk 404ed, or the device gave up — every
+        hidden element is released. `beforeInteractive` placement matters: this
+        has to run before React, or a crash in React would take the guard with it.
+      */}
+      <script
+        // Static string, no interpolation, no user input.
+        dangerouslySetInnerHTML={{
+          __html:
+            "document.documentElement.classList.add('js');" +
+            "window.__revealFailsafe=setTimeout(function(){" +
+            "document.documentElement.classList.add('reveal-failsafe')},4000);",
+        }}
+      />
       <body className="flex min-h-full flex-col" suppressHydrationWarning>
         {children}
       </body>
