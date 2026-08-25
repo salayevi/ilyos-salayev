@@ -205,3 +205,41 @@ export function jsonLd(...nodes: Jsonld[]) {
     (_key, value) => (value === undefined ? undefined : value),
   );
 }
+
+/**
+ * The Open Graph fields every page must keep.
+ *
+ * Metadata objects are merged *shallowly*: a page that declares `openGraph` at
+ * all replaces the layout's entire object, not just the keys it names. So the
+ * home page setting `openGraph: { title, description }` silently dropped the
+ * image, the url, the type and the locale — and the most-shared URL on the site
+ * was the one posting to Telegram and LinkedIn with no preview card.
+ *
+ * Spread this into any page-level `openGraph` and override from there. The
+ * pattern is the one Next's own docs prescribe for exactly this trap.
+ */
+export function openGraphBase(path = "/") {
+  return {
+    type: "website" as const,
+    locale: "uz_UZ",
+    siteName: SITE_NAME,
+    /*
+      The root spelled without its trailing slash, to match the canonical tag.
+
+      `abs("/")` yields `https://…/` while `alternates.canonical` resolves to
+      `https://…` — two spellings of one address in the same document. Crawlers
+      usually reconcile that, but "usually" is the whole reason the canonical
+      tag exists, and disagreeing with yourself is a strange thing to ask a
+      crawler to resolve.
+    */
+    url: path === "/" ? SITE_URL : abs(path),
+    images: [
+      {
+        url: abs("/me/portrait.webp"),
+        width: 1400,
+        height: 1400,
+        alt: `${SITE_NAME} — sun'iy intellekt muhandisi, Toshkent`,
+      },
+    ],
+  };
+}

@@ -8,6 +8,7 @@ import { ProductCard } from "@/components/site/product-card";
 import { ProjectCard } from "@/components/site/project-card";
 import { Reveal } from "@/components/site/reveal";
 import { formatMoney } from "@/lib/format";
+import { openGraphBase } from "@/lib/seo";
 import {
   getCatalog,
   getFeaturedProjects,
@@ -45,7 +46,9 @@ export async function generateMetadata(): Promise<Metadata> {
     // rather than drifting away from what the page actually says.
     title: `${s.heroLine1} ${s.heroLine2} ${s.heroAccent}`.trim(),
     description: s.heroSubline,
-    openGraph: { title: "Ilyos Salayev", description: s.heroSubline },
+    // Spread first: declaring `openGraph` at all replaces the layout's whole
+    // object, so the image and url have to be restated or they vanish.
+    openGraph: { ...openGraphBase("/"), title: "Ilyos Salayev", description: s.heroSubline },
   };
 }
 

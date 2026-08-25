@@ -6,7 +6,7 @@ import { Calculator } from "@/components/pricing/calculator";
 import { saveEstimate } from "@/lib/actions/estimate";
 import { formatMoney } from "@/lib/format";
 import { getCatalog, getCatalogService, getPricingConfig } from "@/lib/queries";
-import { abs, breadcrumbSchema, jsonLd } from "@/lib/seo";
+import { breadcrumbSchema, jsonLd, openGraphBase } from "@/lib/seo";
 
 export async function generateMetadata({
   params,
@@ -23,9 +23,9 @@ export async function generateMetadata({
     description: `${service.summary} ${from ? `${from} dan boshlab.` : ""} Loyihangizni sozlang va narxni real vaqtda ko'ring.`,
     alternates: { canonical: `/pricing/${service.slug}` },
     openGraph: {
+      ...openGraphBase(`/pricing/${service.slug}`),
       title: `${service.name} — Ilyos Salayev`,
       description: service.summary,
-      url: abs(`/pricing/${service.slug}`),
     },
   };
 }

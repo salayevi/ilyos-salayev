@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Reveal } from "@/components/site/reveal";
 import { formatMoney } from "@/lib/format";
 import { getCatalog } from "@/lib/queries";
-import { abs, breadcrumbSchema, jsonLd } from "@/lib/seo";
+import { breadcrumbSchema, jsonLd, openGraphBase } from "@/lib/seo";
 
 export const metadata: Metadata = {
   title: "Xizmatlar va narxlar",
@@ -13,9 +13,9 @@ export const metadata: Metadata = {
     "yakuniy narx esa kalkulyator orqali loyihangizga qarab hisoblanadi.",
   alternates: { canonical: "/pricing" },
   openGraph: {
+    ...openGraphBase("/pricing"),
     title: "Xizmatlar va narxlar — Ilyos Salayev",
     description: "Boshlang'ich narxlar ochiq. Yakuniy narxni kalkulyator hisoblaydi.",
-    url: abs("/pricing"),
   },
 };
 
