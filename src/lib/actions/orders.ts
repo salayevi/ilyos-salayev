@@ -2,11 +2,14 @@
 
 import { createHash, randomBytes } from "node:crypto";
 
-import { and, eq } from "drizzle-orm";
+import { and, eq, gt, inArray, isNull } from "drizzle-orm";
+import { headers } from "next/headers";
 
 import { db } from "@/db";
 import { orders, products, services } from "@/db/schema";
+import { OPEN_ORDER_STATUSES } from "@/lib/inventory";
 import { getSettings } from "@/lib/queries";
+import { checkRate, clientKey } from "@/lib/rate-limit";
 import { orderSchema } from "@/lib/validators";
 
 // Types are erased at compile time, so they may be exported from here. A value
@@ -33,9 +36,14 @@ export type TelegramConfirmState = { ok?: boolean; error?: string };
  * before the afternoon.
  */
 const RESERVATION_MINUTES = 30;
+const CONFIRMATION_MINUTES = 60;
 
 /** Thrown inside the transaction so the rollback and the message share a path. */
-class ListingTaken extends Error {}
+class ListingUnavailable extends Error {
+  constructor(readonly reason: "missing" | "reserved" | "sold") {
+    super(reason);
+  }
+}
 
 function tokenHash(token: string) {
   return createHash("sha256").update(token).digest("hex");
@@ -87,6 +95,16 @@ function toTelegramUrl(username: string | null, message: string) {
  * input is a suggestion, not a fact. Only the row id crosses the wire.
  */
 export async function placeOrder(_prev: OrderState, formData: FormData): Promise<OrderState> {
+  const requestHeaders = await headers();
+  const ipVerdict = await checkRate(clientKey(requestHeaders, "order"), 5);
+  if (!ipVerdict.allowed) {
+    const minutes = Math.ceil(ipVerdict.retryAfterSeconds / 60);
+    return {
+      status: "error",
+      message: `Juda ko'p urinish. ${minutes} daqiqadan keyin qayta urining.`,
+    };
+  }
+
   const parsed = orderSchema.safeParse({
     name: formData.get("name") ?? "",
     email: formData.get("email") ?? "",
@@ -120,40 +138,80 @@ export async function placeOrder(_prev: OrderState, formData: FormData): Promise
   }
 
   const d = parsed.data;
+  // A distributed script can rotate IPs; a hashed email budget stops one
+  // identity from holding the whole shelf without storing that email in the
+  // limiter table itself.
+  const emailVerdict = await checkRate(`order-email:${tokenHash(d.email.toLowerCase())}`, 5);
+  if (!emailVerdict.allowed) {
+    return {
+      status: "error",
+      message: "Bu email bilan juda ko'p so'rov yuborildi. Birozdan keyin qayta urining.",
+    };
+  }
+
   const confirmationToken = randomBytes(24).toString("base64url");
   const customerTokenHash = tokenHash(confirmationToken);
   const settings = await getSettings();
   const ownerTelegram = telegramUsername(settings.telegram);
 
   if (kind === "product") {
-    const [row] = await db.select().from(products).where(eq(products.id, itemId)).limit(1);
-    if (!row || !row.published) return { status: "error", message: "Bu sayt topilmadi" };
-    if (row.status !== "available") {
-      return {
-        status: "error",
-        message: row.status === "sold" ? "Bu sayt allaqachon sotilgan" : "Bu sayt hozir band qilingan",
-      };
-    }
-
     /*
-      Claiming the listing and writing the order are one transaction.
-
-      The conditional update alone is already safe against two buyers — the
-      `where status = 'available'` makes it a compare-and-swap that only one
-      caller can win. What it did not survive was the insert failing
-      afterwards: the listing stayed `reserved` with no order behind it, and
-      nothing in the system would ever release it again. A rolled-back
-      transaction puts the shelf back the way it was found.
+      Lock, expire, claim and insert are one transaction. The row lock makes
+      the product the serialization point: two buyers cannot both observe an
+      available row, and an expired order is closed before its ownership key is
+      replaced by a new buyer's key.
     */
-    let order: { id: number } | undefined;
+    let result:
+      | { id: number; title: string; amount: number; currency: string }
+      | undefined;
     try {
-      order = await db.transaction(async (tx) => {
+      result = await db.transaction(async (tx) => {
+        const [row] = await tx
+          .select()
+          .from(products)
+          .where(eq(products.id, itemId))
+          .limit(1)
+          .for("update");
+
+        if (!row || !row.published) throw new ListingUnavailable("missing");
+
+        const now = new Date();
+        const holdExpired =
+          row.status === "reserved" &&
+          (!row.reservedUntil || row.reservedUntil.getTime() <= now.getTime());
+
+        if (holdExpired) {
+          const ownership = row.reservationKey
+            ? eq(orders.reservationKey, row.reservationKey)
+            : isNull(orders.reservationKey);
+          await tx
+            .update(orders)
+            .set({ status: "expired" })
+            .where(
+              and(
+                eq(orders.kind, "product"),
+                eq(orders.productId, row.id),
+                ownership,
+                inArray(orders.status, [...OPEN_ORDER_STATUSES]),
+              ),
+            );
+          row.status = "available";
+          row.reservedUntil = null;
+          row.reservationKey = null;
+        }
+
+        if (row.status === "sold") throw new ListingUnavailable("sold");
+        if (row.status !== "available") throw new ListingUnavailable("reserved");
+
+        const reservationKey = randomBytes(24).toString("base64url");
+        const reservedUntil = new Date(now.getTime() + RESERVATION_MINUTES * 60_000);
         const [claimed] = await tx
           .update(products)
           .set({
             status: "reserved",
-            reservedUntil: new Date(Date.now() + RESERVATION_MINUTES * 60_000),
-            updatedAt: new Date(),
+            reservedUntil,
+            reservationKey,
+            updatedAt: now,
           })
           .where(
             and(
@@ -163,7 +221,7 @@ export async function placeOrder(_prev: OrderState, formData: FormData): Promise
             ),
           )
           .returning({ id: products.id });
-        if (!claimed) throw new ListingTaken();
+        if (!claimed) throw new ListingUnavailable("reserved");
 
         const [created] = await tx
           .insert(orders)
@@ -178,23 +236,43 @@ export async function placeOrder(_prev: OrderState, formData: FormData): Promise
             phone: d.phone,
             brief: d.brief,
             preferredStart: d.preferredStart,
+            reservationKey,
+            confirmationExpiresAt: reservedUntil,
             customerTokenHash,
           })
           .returning({ id: orders.id });
-        return created;
+        return {
+          id: created.id,
+          title: row.title,
+          amount: row.price,
+          currency: row.currency,
+        };
       });
     } catch (error) {
-      if (error instanceof ListingTaken) {
-        return { status: "error", message: "Bu sayt hozir band qilingan" };
+      if (error instanceof ListingUnavailable) {
+        const message =
+          error.reason === "missing"
+            ? "Bu sayt topilmadi"
+            : error.reason === "sold"
+              ? "Bu sayt allaqachon sotilgan"
+              : "Bu sayt hozir band qilingan";
+        return { status: "error", message };
       }
       console.error("[orders] buyurtma yozib bo'lmadi:", error);
       return { status: "error", message: "Buyurtma saqlanmadi. Qayta urinib ko'ring." };
     }
-    if (!order) return { status: "error", message: "Buyurtma saqlanmadi. Qayta urinib ko'ring." };
-    const message = telegramMessage({ orderId: order.id, title: row.title, kind, amount: row.price, currency: row.currency, ...d });
+    if (!result) return { status: "error", message: "Buyurtma saqlanmadi. Qayta urinib ko'ring." };
+    const message = telegramMessage({
+      orderId: result.id,
+      title: result.title,
+      kind,
+      amount: result.amount,
+      currency: result.currency,
+      ...d,
+    });
     return {
       status: "success",
-      orderId: order.id,
+      orderId: result.id,
       confirmationToken,
       telegramUrl: toTelegramUrl(ownerTelegram, message),
     };
@@ -214,6 +292,7 @@ export async function placeOrder(_prev: OrderState, formData: FormData): Promise
     phone: d.phone,
     brief: d.brief,
     preferredStart: d.preferredStart,
+    confirmationExpiresAt: new Date(Date.now() + CONFIRMATION_MINUTES * 60_000),
     customerTokenHash,
   }).returning({ id: orders.id });
   const message = telegramMessage({ orderId: order.id, title: row.title, kind, amount: row.price, currency: row.currency, ...d });
@@ -230,22 +309,34 @@ export async function confirmTelegramOrder(
   _prev: TelegramConfirmState,
   formData: FormData,
 ): Promise<TelegramConfirmState> {
+  const verdict = await checkRate(clientKey(await headers(), "order-confirm"), 12);
+  if (!verdict.allowed) {
+    return { error: "Juda ko'p urinish. Birozdan keyin qayta urining." };
+  }
+
   const id = Number(formData.get("orderId"));
   const token = String(formData.get("confirmationToken") ?? "");
   if (!Number.isSafeInteger(id) || id <= 0 || token.length < 20) {
     return { error: "Tasdiqlash havolasi noto'g'ri" };
   }
 
-  const [row] = await db
-    .select({ customerTokenHash: orders.customerTokenHash, telegramConfirmedAt: orders.telegramConfirmedAt })
-    .from(orders)
-    .where(eq(orders.id, id))
-    .limit(1);
-  if (!row || row.customerTokenHash !== tokenHash(token)) {
-    return { error: "Tasdiqlash havolasi eskirgan" };
-  }
-  if (!row.telegramConfirmedAt) {
-    await db.update(orders).set({ telegramConfirmedAt: new Date() }).where(eq(orders.id, id));
-  }
+  const [confirmed] = await db
+    .update(orders)
+    .set({
+      telegramConfirmedAt: new Date(),
+      // One successful acknowledgement consumes the token.
+      customerTokenHash: "",
+    })
+    .where(
+      and(
+        eq(orders.id, id),
+        eq(orders.customerTokenHash, tokenHash(token)),
+        isNull(orders.telegramConfirmedAt),
+        gt(orders.confirmationExpiresAt, new Date()),
+        inArray(orders.status, [...OPEN_ORDER_STATUSES]),
+      ),
+    )
+    .returning({ id: orders.id });
+  if (!confirmed) return { error: "Tasdiqlash havolasi eskirgan yoki ishlatilgan" };
   return { ok: true };
 }

@@ -29,6 +29,8 @@ export const admins = pgTable("admins", {
   email: text("email").notNull().unique(),
   name: text("name").notNull(),
   passwordHash: text("password_hash").notNull(),
+  /** Incrementing this revokes every session issued before a password change. */
+  sessionVersion: integer("session_version").notNull().default(1),
   ...stamps,
 });
 
@@ -341,15 +343,20 @@ export const products = pgTable(
      * closed the tab, the order insert failed — stays unbuyable forever, and
      * the only way back is a manual edit. Reads release anything past this
      * instant, so the shelf repairs itself rather than needing a cron.
-     */
+    */
     reservedUntil: timestamp("reserved_until", { withTimezone: true }),
+    /** Opaque ownership key shared only with the order currently holding this row. */
+    reservationKey: text("reservation_key"),
     featured: boolean("featured").notNull().default(false),
     published: boolean("published").notNull().default(true),
     position: integer("position").notNull().default(0),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
     ...stamps,
   },
-  (t) => [uniqueIndex("products_slug_idx").on(t.slug)],
+  (t) => [
+    uniqueIndex("products_slug_idx").on(t.slug),
+    uniqueIndex("products_reservation_key_idx").on(t.reservationKey),
+  ],
 );
 
 export const posts = pgTable(
@@ -441,28 +448,39 @@ export const messages = pgTable(
  * amount are snapshotted so an order still reads correctly after the tariff is
  * repriced or the listing is deleted.
  */
-export const orders = pgTable("orders", {
-  id: serial("id").primaryKey(),
-  /** service · product */
-  kind: text("kind").notNull().default("service"),
-  serviceId: integer("service_id").references(() => services.id, { onDelete: "set null" }),
-  productId: integer("product_id").references(() => products.id, { onDelete: "set null" }),
-  serviceTitle: text("service_title").notNull(),
-  amount: integer("amount").notNull().default(0),
-  currency: text("currency").notNull().default("USD"),
-  name: text("name").notNull(),
-  email: text("email").notNull(),
-  phone: text("phone").notNull().default(""),
-  brief: text("brief").notNull().default(""),
-  preferredStart: text("preferred_start").notNull().default(""),
-  /** new · contacted · scheduled · paid · done · declined */
-  status: text("status").notNull().default("new"),
-  /** The buyer explicitly confirmed that the prepared Telegram message was sent. */
-  telegramConfirmedAt: timestamp("telegram_confirmed_at", { withTimezone: true }),
-  /** Hash of the one-time public acknowledgement token; never sent back after creation. */
-  customerTokenHash: text("customer_token_hash").notNull().default(""),
-  ...stamps,
-});
+export const orders = pgTable(
+  "orders",
+  {
+    id: serial("id").primaryKey(),
+    /** service · product */
+    kind: text("kind").notNull().default("service"),
+    serviceId: integer("service_id").references(() => services.id, { onDelete: "set null" }),
+    productId: integer("product_id").references(() => products.id, { onDelete: "set null" }),
+    serviceTitle: text("service_title").notNull(),
+    amount: integer("amount").notNull().default(0),
+    currency: text("currency").notNull().default("USD"),
+    name: text("name").notNull(),
+    email: text("email").notNull(),
+    phone: text("phone").notNull().default(""),
+    brief: text("brief").notNull().default(""),
+    preferredStart: text("preferred_start").notNull().default(""),
+    /** new · contacted · scheduled · paid · done · declined · expired */
+    status: text("status").notNull().default("new"),
+    /** Matches the product reservation this order owns; never exposed publicly. */
+    reservationKey: text("reservation_key"),
+    /** The acknowledgement token is useless after this instant. */
+    confirmationExpiresAt: timestamp("confirmation_expires_at", { withTimezone: true }),
+    /** The buyer explicitly confirmed that the prepared Telegram message was sent. */
+    telegramConfirmedAt: timestamp("telegram_confirmed_at", { withTimezone: true }),
+    /** Hash of the one-time public acknowledgement token; never sent back after creation. */
+    customerTokenHash: text("customer_token_hash").notNull().default(""),
+    ...stamps,
+  },
+  (t) => [
+    uniqueIndex("orders_reservation_key_idx").on(t.reservationKey),
+    index("orders_product_status_idx").on(t.productId, t.status),
+  ],
+);
 
 /**
  * Minimal, consent-based visitor record. It intentionally stores no IP address

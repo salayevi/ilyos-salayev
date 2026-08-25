@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, asc, count, desc, eq, lte } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, isNull, lte } from "drizzle-orm";
 
 import { db } from "@/db";
 import {
@@ -17,6 +17,7 @@ import {
   settings,
   testimonials,
 } from "@/db/schema";
+import { OPEN_ORDER_STATUSES } from "./inventory";
 import type { Line, PriceGroup, PriceOption } from "./pricing/engine";
 import { type Metric, parseJson } from "./validators";
 
@@ -77,8 +78,14 @@ export async function getFeaturedProjects(): Promise<ProjectView[]> {
 }
 
 export async function getProjectBySlug(slug: string): Promise<ProjectView | null> {
-  const [row] = await db.select().from(projects).where(eq(projects.slug, slug)).limit(1);
-  return row ? toView(row) : null;
+  return safeRead(
+    `project ${slug}`,
+    async () => {
+      const [row] = await db.select().from(projects).where(eq(projects.slug, slug)).limit(1);
+      return row ? toView(row) : null;
+    },
+    null,
+  );
 }
 
 export async function getProjectById(id: number): Promise<ProjectView | null> {
@@ -144,12 +151,44 @@ function toProductView(row: typeof products.$inferSelect): ProductView {
  */
 export async function releaseExpiredReservations(): Promise<number> {
   try {
-    const released = await db
-      .update(products)
-      .set({ status: "available", reservedUntil: null, updatedAt: new Date() })
-      .where(and(eq(products.status, "reserved"), lte(products.reservedUntil, new Date())))
-      .returning({ id: products.id });
-    return released.length;
+    return await db.transaction(async (tx) => {
+      const now = new Date();
+      const expired = await tx
+        .select({ id: products.id, reservationKey: products.reservationKey })
+        .from(products)
+        .where(and(eq(products.status, "reserved"), lte(products.reservedUntil, now)))
+        // Multiple public renders may run the sweep together. Each row belongs
+        // to one sweeper; the rest skip it rather than waiting on the lock.
+        .for("update", { skipLocked: true });
+
+      for (const item of expired) {
+        const ownership = item.reservationKey
+          ? eq(orders.reservationKey, item.reservationKey)
+          : isNull(orders.reservationKey);
+        await tx
+          .update(orders)
+          .set({ status: "expired" })
+          .where(
+            and(
+              eq(orders.kind, "product"),
+              eq(orders.productId, item.id),
+              ownership,
+              inArray(orders.status, [...OPEN_ORDER_STATUSES]),
+            ),
+          );
+        await tx
+          .update(products)
+          .set({
+            status: "available",
+            reservedUntil: null,
+            reservationKey: null,
+            updatedAt: now,
+          })
+          .where(and(eq(products.id, item.id), eq(products.status, "reserved")));
+      }
+
+      return expired.length;
+    });
   } catch (error) {
     console.error("[inventory] eskirgan rezervni bo'shatib bo'lmadi:", error);
     return 0;
@@ -171,8 +210,15 @@ export async function getProducts(opts: { onlyPublished?: boolean } = {}): Promi
 }
 
 export async function getProductBySlug(slug: string): Promise<ProductView | null> {
-  const [row] = await db.select().from(products).where(eq(products.slug, slug)).limit(1);
-  return row ? toProductView(row) : null;
+  await releaseExpiredReservations();
+  return safeRead(
+    `product ${slug}`,
+    async () => {
+      const [row] = await db.select().from(products).where(eq(products.slug, slug)).limit(1);
+      return row ? toProductView(row) : null;
+    },
+    null,
+  );
 }
 
 export async function getProductById(id: number): Promise<ProductView | null> {
@@ -190,8 +236,14 @@ export async function getPosts(opts: { onlyPublished?: boolean } = {}) {
 }
 
 export async function getPostBySlug(slug: string) {
-  const [row] = await db.select().from(posts).where(eq(posts.slug, slug)).limit(1);
-  return row ?? null;
+  return safeRead(
+    `post ${slug}`,
+    async () => {
+      const [row] = await db.select().from(posts).where(eq(posts.slug, slug)).limit(1);
+      return row ?? null;
+    },
+    null,
+  );
 }
 
 export async function getPostById(id: number) {

@@ -59,6 +59,7 @@ export const ORDER_STATUS_LABELS: Record<string, string> = {
   paid: "To'landi",
   done: "Yakunlandi",
   declined: "Rad etildi",
+  expired: "Muddati tugadi",
 };
 
 export const PRODUCT_STATUS_LABELS: Record<string, string> = {

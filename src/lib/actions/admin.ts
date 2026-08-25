@@ -1,6 +1,6 @@
 "use server";
 
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -18,7 +18,16 @@ import {
   services,
   settings,
 } from "@/db/schema";
-import { encryptIntegrationSecret } from "@/lib/integrations";
+import {
+  canTransitionOrder,
+  isOpenOrderStatus,
+  listingStatusForOrder,
+} from "@/lib/inventory";
+import {
+  encryptIntegrationSecret,
+  INTEGRATION_KEYS,
+  type IntegrationKey,
+} from "@/lib/integrations";
 import { captureScreenshot, dropAsset } from "@/lib/screenshot";
 import { readSession } from "@/lib/session";
 import { importFromUrl, type ImportedSource } from "@/lib/sources";
@@ -298,24 +307,6 @@ export async function deleteProduct(formData: FormData) {
 
 // ------------------------------------------------------------------- orders
 
-/**
- * Which shelf state each order state implies.
- *
- * These two used to move independently, so an order could be marked paid while
- * the listing it was for sat in `reserved` — or, worse, be declined while the
- * listing stayed held, which is how a ready-made site quietly stops being for
- * sale. `null` means the order state says nothing about inventory and the
- * listing is left exactly as it is.
- */
-const ORDER_TO_LISTING: Record<string, "sold" | "reserved" | "available" | null> = {
-  new: "reserved",
-  contacted: "reserved",
-  scheduled: "reserved",
-  paid: "sold",
-  done: "sold",
-  declined: "available",
-};
-
 export async function setOrderStatus(formData: FormData) {
   await requireAdmin();
   const id = rowId(formData);
@@ -324,29 +315,92 @@ export async function setOrderStatus(formData: FormData) {
   const parsed = orderStatusSchema.safeParse(formData.get("status"));
   if (!parsed.success) return;
 
-  // One transaction: an order that says "paid" beside a listing that still
-  // says "available" is the kind of disagreement nobody notices until the
-  // same site is sold twice.
   await db.transaction(async (tx) => {
     const [order] = await tx
-      .update(orders)
-      .set({ status: parsed.data })
-      .where(eq(orders.id, id))
-      .returning({ productId: orders.productId, kind: orders.kind });
-
-    if (!order || order.kind !== "product" || order.productId === null) return;
-    const next = ORDER_TO_LISTING[parsed.data];
-    if (!next) return;
-
-    await tx
-      .update(products)
-      .set({
-        status: next,
-        // A sold listing keeps no hold; a released one keeps no deadline.
-        reservedUntil: next === "reserved" ? new Date(Date.now() + 30 * 60_000) : null,
-        updatedAt: new Date(),
+      .select({
+        id: orders.id,
+        productId: orders.productId,
+        kind: orders.kind,
+        status: orders.status,
+        reservationKey: orders.reservationKey,
       })
-      .where(eq(products.id, order.productId));
+      .from(orders)
+      .where(eq(orders.id, id))
+      .limit(1)
+      .for("update");
+
+    if (!order) return;
+    const current = orderStatusSchema.safeParse(order.status);
+    if (!current.success || !canTransitionOrder(current.data, parsed.data)) return;
+
+    if (order.kind !== "product" || order.productId === null) {
+      await tx.update(orders).set({ status: parsed.data }).where(eq(orders.id, order.id));
+      return;
+    }
+
+    const [product] = await tx
+      .select({
+        id: products.id,
+        status: products.status,
+        reservedUntil: products.reservedUntil,
+        reservationKey: products.reservationKey,
+      })
+      .from(products)
+      .where(eq(products.id, order.productId))
+      .limit(1)
+      .for("update");
+
+    if (!product) return;
+    const ownsReservation =
+      Boolean(order.reservationKey) && order.reservationKey === product.reservationKey;
+    const holdExpired =
+      ownsReservation &&
+      product.status === "reserved" &&
+      (!product.reservedUntil || product.reservedUntil.getTime() <= Date.now());
+
+    if (holdExpired) {
+      await tx
+        .update(products)
+        .set({
+          status: "available",
+          reservedUntil: null,
+          reservationKey: null,
+          updatedAt: new Date(),
+        })
+        .where(eq(products.id, product.id));
+      await tx.update(orders).set({ status: "expired" }).where(eq(orders.id, order.id));
+      return;
+    }
+
+    const nextListing = listingStatusForOrder(parsed.data);
+    if (!nextListing) return;
+
+    if (nextListing === "reserved") {
+      if (!ownsReservation || product.status !== "reserved") return;
+      await tx
+        .update(products)
+        .set({ reservedUntil: new Date(Date.now() + 30 * 60_000), updatedAt: new Date() })
+        .where(eq(products.id, product.id));
+    } else if (nextListing === "sold") {
+      // A stale order may never claim a product now held or sold by another.
+      if (!ownsReservation || (product.status !== "reserved" && product.status !== "sold")) return;
+      await tx
+        .update(products)
+        .set({ status: "sold", reservedUntil: null, updatedAt: new Date() })
+        .where(eq(products.id, product.id));
+    } else if (ownsReservation && product.status === "reserved") {
+      await tx
+        .update(products)
+        .set({
+          status: "available",
+          reservedUntil: null,
+          reservationKey: null,
+          updatedAt: new Date(),
+        })
+        .where(eq(products.id, product.id));
+    }
+
+    await tx.update(orders).set({ status: parsed.data }).where(eq(orders.id, order.id));
   });
 
   refreshPublic("/tayyor-saytlar");
@@ -367,15 +421,51 @@ export async function deleteOrder(formData: FormData) {
 
   await db.transaction(async (tx) => {
     const [order] = await tx
-      .delete(orders)
+      .select({
+        id: orders.id,
+        productId: orders.productId,
+        kind: orders.kind,
+        status: orders.status,
+        reservationKey: orders.reservationKey,
+      })
+      .from(orders)
       .where(eq(orders.id, id))
-      .returning({ productId: orders.productId, kind: orders.kind });
+      .limit(1)
+      .for("update");
 
-    if (!order || order.kind !== "product" || order.productId === null) return;
-    await tx
-      .update(products)
-      .set({ status: "available", reservedUntil: null, updatedAt: new Date() })
-      .where(and(eq(products.id, order.productId), eq(products.status, "reserved")));
+    if (!order) return;
+    // Paid orders are financial history. A refund/cancellation flow may append
+    // to them later; deleting them is never the safe interpretation.
+    if (order.status === "paid" || order.status === "done") return;
+
+    if (order.kind === "product" && order.productId !== null) {
+      const [product] = await tx
+        .select({
+          id: products.id,
+          status: products.status,
+          reservationKey: products.reservationKey,
+        })
+        .from(products)
+        .where(eq(products.id, order.productId))
+        .limit(1)
+        .for("update");
+
+      const ownsReservation =
+        Boolean(order.reservationKey) && order.reservationKey === product?.reservationKey;
+      if (product && ownsReservation && product.status === "reserved" && isOpenOrderStatus(order.status)) {
+        await tx
+          .update(products)
+          .set({
+            status: "available",
+            reservedUntil: null,
+            reservationKey: null,
+            updatedAt: new Date(),
+          })
+          .where(eq(products.id, product.id));
+      }
+    }
+
+    await tx.delete(orders).where(eq(orders.id, order.id));
   });
 
   refreshPublic("/tayyor-saytlar");
@@ -573,15 +663,35 @@ export async function saveIntegrations(_prev: FormState, formData: FormData): Pr
   const parsed = integrationsSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { error: "Formani tekshiring", fieldErrors: collect(parsed.error) };
 
-  const values = Object.entries(parsed.data)
-    .filter(([, value]) => value.length > 0)
-    .map(([key, value]) => ({ key, encryptedValue: encryptIntegrationSecret(value), updatedAt: new Date() }));
-  if (values.length === 0) return { ok: true };
+  const removals = INTEGRATION_KEYS.filter((key) => formData.get(`remove_${key}`) === "on");
+  let values: { key: IntegrationKey; encryptedValue: string; updatedAt: Date }[];
+  try {
+    values = (Object.entries(parsed.data) as [IntegrationKey, string][])
+      .filter(([key, value]) => value.length > 0 && !removals.includes(key))
+      .map(([key, value]) => ({
+        key,
+        encryptedValue: encryptIntegrationSecret(value),
+        updatedAt: new Date(),
+      }));
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error
+          ? error.message
+          : "Integratsiya kalitini shifrlab bo'lmadi",
+    };
+  }
 
-  await db.insert(integrationSecrets).values(values).onConflictDoUpdate({
-    target: integrationSecrets.key,
-    set: { encryptedValue: sql`excluded.encrypted_value`, updatedAt: sql`excluded.updated_at` },
-  });
+  if (removals.length > 0) {
+    await db.delete(integrationSecrets).where(inArray(integrationSecrets.key, removals));
+  }
+  if (values.length > 0) {
+    await db.insert(integrationSecrets).values(values).onConflictDoUpdate({
+      target: integrationSecrets.key,
+      set: { encryptedValue: sql`excluded.encrypted_value`, updatedAt: sql`excluded.updated_at` },
+    });
+  }
+  revalidatePath("/admin/settings", "page");
   return { ok: true };
 }
 

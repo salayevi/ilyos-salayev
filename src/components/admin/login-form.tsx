@@ -36,7 +36,8 @@ export function LoginForm() {
           type="email"
           required
           autoComplete="username"
-          defaultValue="salayevi782@gmail.com"
+          autoCapitalize="none"
+          spellCheck={false}
           className={input}
         />
       </div>

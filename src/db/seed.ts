@@ -1,3 +1,5 @@
+import { eq, sql } from "drizzle-orm";
+
 import { db } from "./index";
 import {
   admins,
@@ -379,13 +381,32 @@ async function main() {
     seeded.push(name);
   };
 
-  if (owner) {
-    await fill("admins", await db.select().from(admins), () =>
-      db.insert(admins).values({
+  const existingAdmins = await db.select().from(admins);
+  if (owner && existingAdmins.length === 0) {
+    await db.insert(admins).values({
+      email: owner.email,
+      name: "Ilyos Salayev",
+      passwordHash: hashPassword(owner.password),
+    });
+    seeded.push("admins");
+  } else if (owner && existingAdmins.length === 1) {
+    // Running an explicitly credentialed seed is also the recovery path for a
+    // deployment created with the historical public default. Updating the one
+    // owner row (rather than inserting a second account) removes the old login
+    // and revokes every session issued before this run.
+    await db
+      .update(admins)
+      .set({
         email: owner.email,
         name: "Ilyos Salayev",
         passwordHash: hashPassword(owner.password),
-      }),
+        sessionVersion: sql`${admins.sessionVersion} + 1`,
+      })
+      .where(eq(admins.id, existingAdmins[0].id));
+    seeded.push("admins (credential yangilandi)");
+  } else if (owner) {
+    throw new Error(
+      "Bir nechta admin topildi. Seed xavfsizlik uchun qaysi hisobni egasi deb taxmin qilmaydi.",
     );
   } else {
     skipped.push("admins (ADMIN_EMAIL/ADMIN_PASSWORD yo'q)");

@@ -1,4 +1,5 @@
 import { IntegrationForm } from "@/components/admin/integration-form";
+import { PasswordForm } from "@/components/admin/password-form";
 import { SettingsForm } from "@/components/admin/settings-form";
 import { getIntegrationStatus } from "@/lib/integrations";
 import { getSettings } from "@/lib/queries";
@@ -15,6 +16,9 @@ export default async function AdminSettings() {
       </div>
       <div className="mt-8">
         <IntegrationForm status={integrations} />
+      </div>
+      <div className="mt-8">
+        <PasswordForm />
       </div>
     </>
   );

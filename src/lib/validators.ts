@@ -8,6 +8,7 @@ import {
   TIERS,
   TIMELINES,
 } from "./leads";
+import { ORDER_STATUSES } from "./inventory";
 
 /** Accepts a textarea where each line is one entry; blank lines are dropped. */
 const lines = z
@@ -128,14 +129,7 @@ export const orderSchema = z.object({
   website: z.string().max(0).optional().default(""),
 });
 
-export const orderStatusSchema = z.enum([
-  "new",
-  "contacted",
-  "scheduled",
-  "paid",
-  "done",
-  "declined",
-]);
+export const orderStatusSchema = z.enum(ORDER_STATUSES);
 
 /** Empty integration fields preserve the encrypted value already in the database. */
 export const integrationsSchema = z.object({
@@ -258,6 +252,30 @@ export const loginSchema = z.object({
   email: z.email("Email noto'g'ri"),
   password: z.string().min(1, "Parol kerak"),
 });
+
+const strongPassword = z
+  .string()
+  .min(14, "Yangi parol kamida 14 belgi bo'lsin")
+  .max(128, "Parol juda uzun")
+  .regex(/[a-z]/, "Kamida bitta kichik harf kerak")
+  .regex(/[A-Z]/, "Kamida bitta katta harf kerak")
+  .regex(/[0-9]/, "Kamida bitta raqam kerak")
+  .regex(/[^A-Za-z0-9]/, "Kamida bitta maxsus belgi kerak");
+
+export const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1, "Amaldagi parol kerak").max(128),
+    newPassword: strongPassword,
+    confirmPassword: z.string().min(1, "Yangi parolni takrorlang").max(128),
+  })
+  .refine((value) => value.newPassword === value.confirmPassword, {
+    path: ["confirmPassword"],
+    message: "Yangi parollar bir xil emas",
+  })
+  .refine((value) => value.currentPassword !== value.newPassword, {
+    path: ["newPassword"],
+    message: "Yangi parol eskisidan farq qilsin",
+  });
 
 export const settingsSchema = z.object({
   availability: z.enum(["open", "limited", "closed"]),

@@ -1,5 +1,6 @@
 import { deleteOrder, setOrderStatus } from "@/lib/actions/admin";
 import { ORDER_STATUS_LABELS, formatMoney } from "@/lib/format";
+import { canTransitionOrder, isOrderStatus } from "@/lib/inventory";
 import { getOrders } from "@/lib/queries";
 
 const FLOW = ["new", "contacted", "scheduled", "paid", "done", "declined"] as const;
@@ -11,11 +12,14 @@ const STATUS_STYLES: Record<string, string> = {
   paid: "bg-ok-bg text-ok",
   done: "bg-s3 text-ts",
   declined: "bg-bad-bg text-bad",
+  expired: "bg-s3 text-tt",
 };
 
 export default async function AdminOrders() {
   const rows = await getOrders();
-  const open = rows.filter((o) => o.status !== "done" && o.status !== "declined");
+  const open = rows.filter(
+    (o) => o.status !== "done" && o.status !== "declined" && o.status !== "expired",
+  );
   const earned = rows
     .filter((o) => o.status === "paid" || o.status === "done")
     .reduce<Record<string, number>>((acc, o) => {
@@ -113,7 +117,9 @@ export default async function AdminOrders() {
               )}
 
               <div className="mt-4 flex flex-wrap items-center gap-2">
-                {FLOW.filter((s) => s !== o.status).map((s) => (
+                {FLOW.filter(
+                  (next) => isOrderStatus(o.status) && canTransitionOrder(o.status, next),
+                ).map((s) => (
                   <form key={s} action={setOrderStatus}>
                     <input type="hidden" name="id" value={o.id} />
                     <input type="hidden" name="status" value={s} />
@@ -122,12 +128,14 @@ export default async function AdminOrders() {
                     </button>
                   </form>
                 ))}
-                <form action={deleteOrder}>
-                  <input type="hidden" name="id" value={o.id} />
-                  <button type="submit" className={`${pill} border-bad/40 text-bad hover:bg-bad-bg`}>
-                    O&apos;chirish
-                  </button>
-                </form>
+                {o.status !== "paid" && o.status !== "done" && (
+                  <form action={deleteOrder}>
+                    <input type="hidden" name="id" value={o.id} />
+                    <button type="submit" className={`${pill} border-bad/40 text-bad hover:bg-bad-bg`}>
+                      O&apos;chirish
+                    </button>
+                  </form>
+                )}
               </div>
             </li>
           ))}
