@@ -21,9 +21,12 @@ function create() {
     // `next dev`'s module reloads from stacking up idle connections.
     max: 8,
     idleTimeoutMillis: 30_000,
-    // Managed Postgres (Neon, Supabase, Vercel) terminates plain connections.
-    // Local instances have no certificate, so only ask for TLS remotely.
-    ssl: /localhost|127\.0\.0\.1/.test(url) ? undefined : { rejectUnauthorized: false },
+    // Managed Postgres terminates plain connections. Remote certificates are
+    // verified by default; the explicit escape hatch exists only for a legacy
+    // provider with a private CA and should never be the production default.
+    ssl: /localhost|127\.0\.0\.1/.test(url)
+      ? undefined
+      : { rejectUnauthorized: process.env.DATABASE_SSL_REJECT_UNAUTHORIZED !== "false" },
   });
   return drizzle(pool, { schema });
 }

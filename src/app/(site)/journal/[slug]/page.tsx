@@ -3,14 +3,22 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { getPostBySlug } from "@/lib/queries";
+import { pageMetadata } from "@/lib/seo";
 
 type Params = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { slug } = await params;
   const post = await getPostBySlug(slug);
-  if (!post) return { title: "Topilmadi" };
-  return { title: post.title, description: post.excerpt };
+  if (!post || !post.published) return { title: "Topilmadi", robots: { index: false } };
+  return pageMetadata({
+    title: post.title,
+    description: post.excerpt,
+    path: `/journal/${post.slug}`,
+    type: "article",
+    publishedTime: post.createdAt.toISOString(),
+    modifiedTime: post.updatedAt.toISOString(),
+  });
 }
 
 export default async function PostPage({ params }: Params) {

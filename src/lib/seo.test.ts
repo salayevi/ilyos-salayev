@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { openGraphBase, SITE_URL } from "./seo";
+import { openGraphBase, pageMetadata, SITE_URL } from "./seo";
 
 /**
  * The share card, pinned.
@@ -57,5 +57,40 @@ describe("open graph asosi", () => {
     for (const image of og.images) {
       assert.ok(!image.url.includes("localhost"), "rasm localhost bo'lmasin");
     }
+  });
+});
+
+describe("har bir sahifaning o'z canonical manzili", () => {
+  it("canonical, OG va Twitter URLlarini bir sahifaga bog'laydi", () => {
+    const metadata = pageMetadata({
+      title: "Ishlangan ishlar",
+      description: "Yakunlangan loyihalar",
+      path: "/work",
+    });
+    assert.equal(metadata.alternates?.canonical, "/work");
+    assert.equal(metadata.openGraph?.url, `${SITE_URL}/work`);
+    assert.equal(metadata.openGraph?.title, "Ishlangan ishlar");
+    assert.equal(metadata.twitter?.title, "Ishlangan ishlar");
+  });
+
+  it("tashqi va ichki preview rasmlarini to'g'ri absolyut qiladi", () => {
+    const local = pageMetadata({
+      title: "Mahsulot",
+      description: "Tavsif",
+      path: "/tayyor-saytlar/demo",
+      image: "/api/shot/1",
+    });
+    const external = pageMetadata({
+      title: "Loyiha",
+      description: "Tavsif",
+      path: "/work/demo",
+      image: "https://cdn.example.com/shot.webp",
+    });
+    const localImages = local.openGraph?.images;
+    const externalImages = external.openGraph?.images;
+    assert.ok(Array.isArray(localImages));
+    assert.ok(Array.isArray(externalImages));
+    assert.equal(localImages[0]?.url, `${SITE_URL}/api/shot/1`);
+    assert.equal(externalImages[0]?.url, "https://cdn.example.com/shot.webp");
   });
 });

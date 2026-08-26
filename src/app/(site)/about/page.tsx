@@ -3,11 +3,13 @@ import type { Metadata } from "next";
 import { Photo } from "@/components/site/photo";
 import { Reveal } from "@/components/site/reveal";
 import { getSettings } from "@/lib/queries";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Men haqimda",
   description: "Ovoz, xotira va real vaqt tizimlari ustida ishlaydigan muhandis. Toshkent.",
-};
+  path: "/about",
+});
 
 const SKILLS = [
   { area: "Ovoz va audio", tools: "Silero · Whisper · WebRTC AEC", years: "6 yil", depth: 5 },

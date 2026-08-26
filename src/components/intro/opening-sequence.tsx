@@ -46,6 +46,8 @@ import { pickTier } from "@/components/hero/frame-sequence";
 const CURTAIN_MS = 1300;
 /** Frames the hero needs before we are willing to hand over. */
 const COARSE_STRIDE = 8;
+/** A slow frame may reduce handover quality, but may never block the site. */
+const HERO_WARM_TIMEOUT_MS = 8000;
 
 type Phase = "idle" | "playing" | "curtain" | "gone";
 
@@ -107,9 +109,20 @@ export function OpeningSequence() {
           new Promise<void>((resolve) => {
             const img = new Image();
             img.decoding = "async";
-            // A failed frame must not hold the curtain shut.
-            img.onload = () => resolve();
-            img.onerror = () => resolve();
+            let settled = false;
+            const finish = () => {
+              if (settled) return;
+              settled = true;
+              window.clearTimeout(timeout);
+              img.onload = null;
+              img.onerror = null;
+              resolve();
+            };
+            // A failed or hanging frame may reduce the first scrub's fidelity,
+            // but must never hold the full-screen curtain shut.
+            const timeout = window.setTimeout(finish, HERO_WARM_TIMEOUT_MS);
+            img.onload = finish;
+            img.onerror = finish;
             img.src = framePath(tier, i);
           }),
       ),
@@ -231,7 +244,7 @@ export function OpeningSequence() {
   }, [skip]);
 
   useEffect(() => {
-    if (phase !== "idle") return;
+    if (!showing) return;
     const root = rootRef.current;
     if (!root) return;
     const onKeyDown = (event: KeyboardEvent) => {
@@ -255,7 +268,16 @@ export function OpeningSequence() {
     };
     root.addEventListener("keydown", onKeyDown);
     return () => root.removeEventListener("keydown", onKeyDown);
-  }, [phase, skip]);
+  }, [showing, skip]);
+
+  // Defence in depth for unexpected preload failures outside the individual
+  // image handlers. Once the film is over, eight seconds is the absolute
+  // longest the visitor can see a preparation message.
+  useEffect(() => {
+    if (!filmEnded || heroWarm) return;
+    const timeout = window.setTimeout(() => setHeroWarm(true), HERO_WARM_TIMEOUT_MS);
+    return () => window.clearTimeout(timeout);
+  }, [filmEnded, heroWarm]);
 
   /*
     The threshold is crossed here.
@@ -302,11 +324,11 @@ export function OpeningSequence() {
             // eye reads forward motion rather than a fade.
             transform: phase === "curtain" ? "scale(1.06)" : "scale(1)",
             transition: `opacity ${CURTAIN_MS}ms var(--ease-cinematic), transform ${CURTAIN_MS + 300}ms var(--ease-cinematic)`,
-            cursor: phase === "playing" ? "none" : "auto",
+            cursor: "auto",
             pointerEvents: phase === "curtain" ? "none" : "auto",
           }}
-          role={phase === "idle" ? "dialog" : undefined}
-          aria-modal={phase === "idle" ? true : undefined}
+          role={showing ? "dialog" : undefined}
+          aria-modal={showing ? true : undefined}
           aria-label="Kirish sahnasi"
         >
           <video
@@ -366,6 +388,17 @@ export function OpeningSequence() {
             <div className="absolute inset-x-0 bottom-10 flex justify-center">
               <p className="label text-[10px]">Sahna tayyorlanmoqda</p>
             </div>
+          )}
+
+          {phase === "playing" && (
+            <button
+              type="button"
+              onClick={skip}
+              autoFocus
+              className="absolute top-5 right-5 rounded-full border border-white/20 bg-black/35 px-4 py-2 text-[11px] tracking-[0.08em] text-white/75 uppercase backdrop-blur transition-colors hover:border-white/40 hover:text-white md:top-7 md:right-7"
+            >
+              O&apos;tkazib yuborish
+            </button>
           )}
         </div>
       )}

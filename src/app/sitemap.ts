@@ -14,18 +14,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     getPosts({ onlyPublished: true }),
   ]);
 
-  const now = new Date();
-
   // Priorities describe how the site sees itself: the landing page first, then
   // the two pages that convert (work and the store), then the rest.
   const staticPages: MetadataRoute.Sitemap = [
-    { url: abs("/"), lastModified: now, changeFrequency: "weekly", priority: 1 },
-    { url: abs("/work"), lastModified: now, changeFrequency: "weekly", priority: 0.9 },
-    { url: abs("/tayyor-saytlar"), lastModified: now, changeFrequency: "daily", priority: 0.9 },
-    { url: abs("/pricing"), lastModified: now, changeFrequency: "monthly", priority: 0.9 },
-    { url: abs("/about"), lastModified: now, changeFrequency: "monthly", priority: 0.7 },
-    { url: abs("/journal"), lastModified: now, changeFrequency: "weekly", priority: 0.6 },
-    { url: abs("/contact"), lastModified: now, changeFrequency: "yearly", priority: 0.5 },
+    { url: abs("/"), changeFrequency: "weekly", priority: 1 },
+    { url: abs("/work"), changeFrequency: "weekly", priority: 0.9 },
+    { url: abs("/tayyor-saytlar"), changeFrequency: "daily", priority: 0.9 },
+    { url: abs("/pricing"), changeFrequency: "monthly", priority: 0.9 },
+    { url: abs("/about"), changeFrequency: "monthly", priority: 0.7 },
+    { url: abs("/journal"), changeFrequency: "weekly", priority: 0.6 },
+    { url: abs("/contact"), changeFrequency: "yearly", priority: 0.5 },
   ];
 
   return [

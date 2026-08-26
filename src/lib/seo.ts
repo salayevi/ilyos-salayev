@@ -1,3 +1,5 @@
+import type { Metadata } from "next";
+
 import type { ProductView, ProjectView, SiteSettings } from "@/lib/queries";
 
 /**
@@ -14,6 +16,7 @@ export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://ilyos-sala
 export const SITE_NAME = "Ilyos Salayev";
 
 export function abs(path: string) {
+  if (/^https?:\/\//i.test(path)) return path;
   return `${SITE_URL}${path.startsWith("/") ? path : `/${path}`}`;
 }
 
@@ -241,5 +244,59 @@ export function openGraphBase(path = "/") {
         alt: `${SITE_NAME} — sun'iy intellekt muhandisi, Toshkent`,
       },
     ],
+  };
+}
+
+type PageMetadataInput = {
+  title: string;
+  description: string;
+  path: string;
+  image?: string;
+  imageAlt?: string;
+  type?: "website" | "article";
+  publishedTime?: string;
+  modifiedTime?: string;
+};
+
+/**
+ * Complete route metadata. Every public page calls this instead of inheriting
+ * the root URL, so canonical, Open Graph and Twitter always describe the URL
+ * that was actually shared.
+ */
+export function pageMetadata(input: PageMetadataInput): Metadata {
+  const fallback = openGraphBase(input.path);
+  const images = input.image
+    ? [{ url: abs(input.image), alt: input.imageAlt ?? input.title }]
+    : fallback.images;
+  const shared = {
+    ...fallback,
+    title: input.title,
+    description: input.description,
+    images,
+  };
+  const openGraph =
+    input.type === "article"
+      ? {
+          ...shared,
+          type: "article" as const,
+          publishedTime: input.publishedTime,
+          modifiedTime: input.modifiedTime,
+        }
+      : shared;
+
+  return {
+    title: input.title,
+    description: input.description,
+    alternates: {
+      canonical: input.path,
+      languages: { "uz-UZ": input.path, "x-default": input.path },
+    },
+    openGraph,
+    twitter: {
+      card: "summary_large_image",
+      title: input.title,
+      description: input.description,
+      images: images.map((image) => ({ url: image.url, alt: image.alt })),
+    },
   };
 }

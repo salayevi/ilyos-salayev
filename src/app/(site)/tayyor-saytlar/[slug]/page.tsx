@@ -7,14 +7,21 @@ import { OrderForm } from "@/components/site/order-form";
 import { Reveal } from "@/components/site/reveal";
 import { PRODUCT_STATUS_LABELS, formatMoney } from "@/lib/format";
 import { getProductBySlug, getProducts } from "@/lib/queries";
+import { pageMetadata } from "@/lib/seo";
 
 type Params = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { slug } = await params;
   const product = await getProductBySlug(slug);
-  if (!product) return { title: "Topilmadi" };
-  return { title: product.title, description: product.summary };
+  if (!product || !product.published) return { title: "Topilmadi", robots: { index: false } };
+  return pageMetadata({
+    title: product.title,
+    description: product.summary || product.description,
+    path: `/tayyor-saytlar/${product.slug}`,
+    image: product.previewImage || undefined,
+    imageAlt: `${product.title} sayti ekrani`,
+  });
 }
 
 export default async function ProductPage({ params }: Params) {

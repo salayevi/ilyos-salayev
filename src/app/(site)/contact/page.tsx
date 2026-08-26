@@ -3,11 +3,13 @@ import type { Metadata } from "next";
 import { Availability } from "@/components/site/availability";
 import { ContactForm } from "@/components/site/contact-form";
 import { getSettings } from "@/lib/queries";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Bog'lanish",
   description: "Loyihangiz haqida yozing — bir ish kuni ichida javob beraman.",
-};
+  path: "/contact",
+});
 
 export default async function ContactPage({
   searchParams,

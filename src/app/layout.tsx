@@ -64,12 +64,6 @@ export const metadata: Metadata = {
   publisher: SITE_NAME,
   applicationName: SITE_NAME,
   category: "technology",
-  // One canonical origin, and the Uzbek page is the default for every locale
-  // that has no translation of its own.
-  alternates: {
-    canonical: "/",
-    languages: { "uz-UZ": "/", "x-default": "/" },
-  },
   openGraph: {
     type: "website",
     locale: "uz_UZ",

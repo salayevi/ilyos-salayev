@@ -4,12 +4,14 @@ import Link from "next/link";
 import { ProductCard } from "@/components/site/product-card";
 import { Reveal } from "@/components/site/reveal";
 import { getProducts } from "@/lib/queries";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Tayyor saytlar",
   description:
     "Qurib qo'yilgan, ishga tushirishga tayyor saytlar — narxi belgilangan, demosi ochiq.",
-};
+  path: "/tayyor-saytlar",
+});
 
 const STEPS = [
   { title: "Demoni ko'ring", body: "Har bir sayt jonli ishlaydi — bosib, aylanib chiqing." },

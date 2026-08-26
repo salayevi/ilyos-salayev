@@ -2,11 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { getPosts } from "@/lib/queries";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Jurnal",
   description: "Muhandislik yozuvlari — ovoz, xotira, arxitektura.",
-};
+  path: "/journal",
+});
 
 export default async function JournalPage() {
   const posts = await getPosts({ onlyPublished: true });

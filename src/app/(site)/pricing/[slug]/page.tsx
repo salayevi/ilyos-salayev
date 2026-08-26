@@ -6,7 +6,7 @@ import { Calculator } from "@/components/pricing/calculator";
 import { saveEstimate } from "@/lib/actions/estimate";
 import { formatMoney } from "@/lib/format";
 import { getCatalog, getCatalogService, getPricingConfig } from "@/lib/queries";
-import { breadcrumbSchema, jsonLd, openGraphBase } from "@/lib/seo";
+import { breadcrumbSchema, jsonLd, pageMetadata } from "@/lib/seo";
 
 export async function generateMetadata({
   params,
@@ -15,19 +15,14 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const service = await getCatalogService(slug);
-  if (!service) return { title: "Topilmadi" };
+  if (!service || !service.published) return { title: "Topilmadi", robots: { index: false } };
 
   const from = formatMoney(service.basePrice, service.currency);
-  return {
+  return pageMetadata({
     title: `${service.name} — narxni hisoblash`,
     description: `${service.summary} ${from ? `${from} dan boshlab.` : ""} Loyihangizni sozlang va narxni real vaqtda ko'ring.`,
-    alternates: { canonical: `/pricing/${service.slug}` },
-    openGraph: {
-      ...openGraphBase(`/pricing/${service.slug}`),
-      title: `${service.name} — Ilyos Salayev`,
-      description: service.summary,
-    },
-  };
+    path: `/pricing/${service.slug}`,
+  });
 }
 
 export default async function CalculatorPage({

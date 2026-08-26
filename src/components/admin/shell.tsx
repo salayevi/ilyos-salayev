@@ -11,7 +11,6 @@ const NAV = [
   { href: "/admin/analytics", label: "Tashriflar" },
   { href: "/admin/estimates", label: "Hisoblar", badge: "estimates" },
   { href: "/admin/pricing", label: "Narxlar" },
-  { href: "/admin/services", label: "Xizmatlar (eski)" },
   { href: "/admin/journal", label: "Jurnal" },
   { href: "/admin/messages", label: "Xabarlar", badge: "messages" },
   { href: "/admin/settings", label: "Sozlamalar" },

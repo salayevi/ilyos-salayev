@@ -2,7 +2,7 @@ import "server-only";
 
 import { randomBytes } from "node:crypto";
 
-import { eq, gte } from "drizzle-orm";
+import { and, desc, eq, gte, sql } from "drizzle-orm";
 import { cookies, headers } from "next/headers";
 
 import { db } from "@/db";
@@ -96,27 +96,31 @@ export async function recordAnalyticsEvent(input: AnalyticsEventInput): Promise<
     jar.set(VISITOR_COOKIE, token, cookieOptions());
   }
 
-  let [visitor] = await db.select().from(visitors).where(eq(visitors.token, token)).limit(1);
-  if (!visitor) {
-    [visitor] = await db
-      .insert(visitors)
-      .values({
-        token,
-        firstSeenAt: now,
+  const sessionCutoff = new Date(now.getTime() - 30 * 60_000);
+  const [visitor] = await db
+    .insert(visitors)
+    .values({
+      token,
+      firstSeenAt: now,
+      lastSeenAt: now,
+      visits: 1,
+      ...details,
+      country,
+      city,
+    })
+    .onConflictDoUpdate({
+      target: visitors.token,
+      set: {
         lastSeenAt: now,
-        visits: 1,
+        // A visit is a session, not a click. Navigation inside the same
+        // 30-minute activity window updates lastSeenAt without inflating it.
+        visits: sql`case when ${visitors.lastSeenAt} < ${sessionCutoff} then ${visitors.visits} + 1 else ${visitors.visits} end`,
         ...details,
         country,
         city,
-      })
-      .returning();
-  } else {
-    [visitor] = await db
-      .update(visitors)
-      .set({ lastSeenAt: now, visits: visitor.visits + 1, ...details, country, city })
-      .where(eq(visitors.id, visitor.id))
-      .returning();
-  }
+      },
+    })
+    .returning({ id: visitors.id });
 
   await db.insert(analyticsEvents).values({
     visitorId: visitor.id,
@@ -135,44 +139,61 @@ export type AnalyticsOverview = {
   recent: { device: string; browser: string; os: string; country: string; city: string; lastSeenAt: Date }[];
 };
 
-function tally(values: string[], limit: number) {
-  const counts = new Map<string, number>();
-  for (const value of values) counts.set(value || "Noma'lum", (counts.get(value || "Noma'lum") ?? 0) + 1);
-  return [...counts.entries()]
-    .map(([label, count]) => ({ label, count }))
-    .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label))
-    .slice(0, limit);
-}
-
 /** Admin-only callers use the past 30 days to keep the dashboard actionable. */
 export async function getAnalyticsOverview(): Promise<AnalyticsOverview> {
   const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-  const recentVisitors = await db
-    .select()
-    .from(visitors)
-    .where(gte(visitors.lastSeenAt, since))
-    .orderBy(visitors.lastSeenAt);
-  const recentEvents = await db
-    .select()
-    .from(analyticsEvents)
-    .where(gte(analyticsEvents.createdAt, since));
+  const [visitorTotal, eventTotals, devices, paths, recent] = await Promise.all([
+    db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(visitors)
+      .where(gte(visitors.lastSeenAt, since)),
+    db
+      .select({ type: analyticsEvents.type, count: sql<number>`count(*)::int` })
+      .from(analyticsEvents)
+      .where(gte(analyticsEvents.createdAt, since))
+      .groupBy(analyticsEvents.type),
+    db
+      .select({ label: visitors.device, count: sql<number>`count(*)::int` })
+      .from(visitors)
+      .where(gte(visitors.lastSeenAt, since))
+      .groupBy(visitors.device)
+      .orderBy(desc(sql`count(*)`))
+      .limit(4),
+    db
+      .select({ label: analyticsEvents.path, count: sql<number>`count(*)::int` })
+      .from(analyticsEvents)
+      .where(
+        and(
+          gte(analyticsEvents.createdAt, since),
+          eq(analyticsEvents.type, "pageview"),
+        ),
+      )
+      .groupBy(analyticsEvents.path)
+      .orderBy(desc(sql`count(*)`))
+      .limit(6),
+    db
+      .select({
+        device: visitors.device,
+        browser: visitors.browser,
+        os: visitors.os,
+        country: visitors.country,
+        city: visitors.city,
+        lastSeenAt: visitors.lastSeenAt,
+      })
+      .from(visitors)
+      .where(gte(visitors.lastSeenAt, since))
+      .orderBy(desc(visitors.lastSeenAt))
+      .limit(8),
+  ]);
+
+  const totals = new Map(eventTotals.map((row) => [row.type, row.count]));
 
   return {
-    uniqueVisitors: recentVisitors.length,
-    pageviews: recentEvents.filter((event) => event.type === "pageview").length,
-    navigations: recentEvents.filter((event) => event.type === "navigation").length,
-    devices: tally(recentVisitors.map((visitor) => visitor.device), 4),
-    paths: tally(recentEvents.filter((event) => event.type === "pageview").map((event) => event.path), 6),
-    recent: recentVisitors
-      .sort((a, b) => b.lastSeenAt.getTime() - a.lastSeenAt.getTime())
-      .slice(0, 8)
-      .map(({ device, browser, os, country, city, lastSeenAt }) => ({
-        device,
-        browser,
-        os,
-        country,
-        city,
-        lastSeenAt,
-      })),
+    uniqueVisitors: visitorTotal[0]?.count ?? 0,
+    pageviews: totals.get("pageview") ?? 0,
+    navigations: totals.get("navigation") ?? 0,
+    devices: devices.map((row) => ({ label: row.label || "Noma'lum", count: row.count })),
+    paths: paths.map((row) => ({ label: row.label || "Noma'lum", count: row.count })),
+    recent,
   };
 }

@@ -2,12 +2,14 @@ import type { Metadata } from "next";
 
 import { WorkFilter } from "@/components/site/work-filter";
 import { getProjects } from "@/lib/queries";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Ishlangan ishlar",
   description:
     "Yakunlangan loyihalar — har birida saytning haqiqiy ekran surati va keys matni.",
-};
+  path: "/work",
+});
 
 export default async function WorkPage() {
   const projects = await getProjects({ onlyPublished: true });

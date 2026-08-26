@@ -3,20 +3,20 @@ import Link from "next/link";
 import { getAnalyticsOverview } from "@/lib/analytics";
 import { ORDER_STATUS_LABELS, formatMoney } from "@/lib/format";
 import {
+  getCatalog,
   getMessages,
   getOrders,
   getPosts,
   getProducts,
   getProjects,
-  getServices,
   getSettings,
 } from "@/lib/queries";
 
 export default async function AdminHome() {
-  const [projects, products, services, posts, inbox, orders, s, analytics] = await Promise.all([
+  const [projects, products, catalog, posts, inbox, orders, s, analytics] = await Promise.all([
     getProjects(),
     getProducts(),
-    getServices(),
+    getCatalog(),
     getPosts(),
     getMessages(),
     getOrders(),
@@ -24,7 +24,9 @@ export default async function AdminHome() {
     getAnalyticsOverview(),
   ]);
 
-  const openOrders = orders.filter((o) => o.status !== "done" && o.status !== "declined");
+  const openOrders = orders.filter(
+    (o) => o.status !== "done" && o.status !== "declined" && o.status !== "expired",
+  );
   const forSale = products.filter((p) => p.status === "available" && p.published);
 
   const stats = [
@@ -165,7 +167,6 @@ export default async function AdminHome() {
             { href: "/admin/projects/new", label: "Yangi loyiha" },
             { href: "/admin/store/new", label: "Saytni sotuvga qo'yish" },
             { href: "/admin/journal/new", label: "Yangi yozuv" },
-            { href: "/admin/services/new", label: "Yangi xizmat" },
             { href: "/admin/settings", label: "Sozlamalar" },
           ].map((a) => (
             <Link
@@ -178,7 +179,7 @@ export default async function AdminHome() {
           ))}
         </div>
         <p className="mt-4 text-xs text-tt">
-          {services.length} ta xizmat · {posts.length} ta jurnal yozuvi
+          {catalog.length} ta xizmat yo&apos;nalishi · {posts.length} ta jurnal yozuvi
         </p>
       </section>
     </>

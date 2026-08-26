@@ -1,0 +1,34 @@
+name: Quality
+
+on:
+  push:
+    branches: [main, brand/is-dragon-crimson]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      # drizzle-kit check validates snapshots and never connects, but its typed
+      # config still requires a syntactically valid URL.
+      DATABASE_URL: postgresql://check:check@localhost:5432/check
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run db:check
+      - run: npm run build:webpack

@@ -4,20 +4,15 @@ import Link from "next/link";
 import { Reveal } from "@/components/site/reveal";
 import { formatMoney } from "@/lib/format";
 import { getCatalog } from "@/lib/queries";
-import { breadcrumbSchema, jsonLd, openGraphBase } from "@/lib/seo";
+import { breadcrumbSchema, jsonLd, pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "Xizmatlar va narxlar",
   description:
     "Landing sahifadan to'liq tizimgacha. Har bir yo'nalishning boshlang'ich narxi ochiq, " +
     "yakuniy narx esa kalkulyator orqali loyihangizga qarab hisoblanadi.",
-  alternates: { canonical: "/pricing" },
-  openGraph: {
-    ...openGraphBase("/pricing"),
-    title: "Xizmatlar va narxlar — Ilyos Salayev",
-    description: "Boshlang'ich narxlar ochiq. Yakuniy narxni kalkulyator hisoblaydi.",
-  },
-};
+  path: "/pricing",
+});
 
 /**
  * Kept from the retired /services page. It answers the question the catalogue

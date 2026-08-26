@@ -5,14 +5,21 @@ import { notFound } from "next/navigation";
 import { BrowserFrame, hostOf } from "@/components/site/media-frame";
 import { Reveal } from "@/components/site/reveal";
 import { getAdjacentProject, getProjectBySlug, getProjects } from "@/lib/queries";
+import { pageMetadata } from "@/lib/seo";
 
 type Params = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { slug } = await params;
   const project = await getProjectBySlug(slug);
-  if (!project) return { title: "Topilmadi" };
-  return { title: project.title, description: project.summary };
+  if (!project || !project.published) return { title: "Topilmadi", robots: { index: false } };
+  return pageMetadata({
+    title: project.title,
+    description: project.summary,
+    path: `/work/${project.slug}`,
+    image: project.previewImage || undefined,
+    imageAlt: `${project.title} sayti ekrani`,
+  });
 }
 
 export default async function CaseStudyPage({ params }: Params) {
