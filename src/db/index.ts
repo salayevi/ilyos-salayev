@@ -28,6 +28,18 @@ function create() {
       ? undefined
       : { rejectUnauthorized: process.env.DATABASE_SSL_REJECT_UNAUTHORIZED !== "false" },
   });
+  /*
+    An idle connection that dies on its own — Postgres restarting, the laptop
+    waking from sleep, a managed provider recycling the backend — makes `pg`
+    emit `error` on the pool rather than on the query that noticed. `Pool` is an
+    EventEmitter, so with no listener that is an unhandled `error` event and
+    Node kills the process: `next dev` disappears mid-session over a fault the
+    next request would have reconnected through. Logging it is the whole fix;
+    the pool discards the dead client either way.
+  */
+  pool.on("error", (error) => {
+    console.error("[db] bo'sh turgan ulanish uzildi:", error);
+  });
   return drizzle(pool, { schema });
 }
 

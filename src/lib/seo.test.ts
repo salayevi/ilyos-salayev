@@ -4,6 +4,20 @@ import { describe, it } from "node:test";
 import { openGraphBase, pageMetadata, SITE_URL } from "./seo";
 
 /**
+ * Next types an Open Graph image as `string | URL | descriptor`, so the
+ * descriptor `pageMetadata` actually builds cannot have its `url` read until
+ * the union is narrowed. The narrowing is the assertion: a plain string here
+ * would mean the width, height and alt text stopped being emitted.
+ */
+function ogImageUrl(image: unknown): unknown {
+  assert.ok(
+    image !== null && typeof image === "object" && "url" in image,
+    "og:image tavsif obyekti bo'lsin",
+  );
+  return image.url;
+}
+
+/**
  * The share card, pinned.
  *
  * Next merges metadata objects *shallowly*: a page that declares `openGraph`
@@ -90,7 +104,7 @@ describe("har bir sahifaning o'z canonical manzili", () => {
     const externalImages = external.openGraph?.images;
     assert.ok(Array.isArray(localImages));
     assert.ok(Array.isArray(externalImages));
-    assert.equal(localImages[0]?.url, `${SITE_URL}/api/shot/1`);
-    assert.equal(externalImages[0]?.url, "https://cdn.example.com/shot.webp");
+    assert.equal(ogImageUrl(localImages[0]), `${SITE_URL}/api/shot/1`);
+    assert.equal(ogImageUrl(externalImages[0]), "https://cdn.example.com/shot.webp");
   });
 });

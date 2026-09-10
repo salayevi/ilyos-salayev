@@ -121,6 +121,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       // scroll reset, and the dev server logs a warning on each render.
       data-scroll-behavior="smooth"
       className={`${geist.variable} ${geistMono.variable} ${instrument.variable} h-full antialiased`}
+      // The script below adds `js` to this element before React hydrates, so
+      // the DOM's class list is one entry ahead of what the server sent — by
+      // design, and React reported it as an <html> className mismatch it
+      // "won't patch up" on every single render. Suppressing here covers only
+      // this element's own attributes; children still hydrate strictly.
+      suppressHydrationWarning
     >
       {/*
         Browser extensions stamp attributes onto <body> before React hydrates —
@@ -128,28 +134,35 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         extension's doing, not ours. Suppressing here covers only this element's
         own attributes; children still hydrate strictly.
       */}
-      {/*
-        Two jobs, before anything else paints.
-
-        `js` switches the reveal system on. The stylesheet keeps content visible
-        until this class exists, so scripting being off or the bundle failing to
-        load leaves a readable page instead of a blank one.
-
-        The timer is the deadline. If the reveal system has not cleared it —
-        because hydration threw, the chunk 404ed, or the device gave up — every
-        hidden element is released. `beforeInteractive` placement matters: this
-        has to run before React, or a crash in React would take the guard with it.
-      */}
-      <script
-        // Static string, no interpolation, no user input.
-        dangerouslySetInnerHTML={{
-          __html:
-            "document.documentElement.classList.add('js');" +
-            "window.__revealFailsafe=setTimeout(function(){" +
-            "document.documentElement.classList.add('reveal-failsafe')},4000);",
-        }}
-      />
       <body className="flex min-h-full flex-col" suppressHydrationWarning>
+        {/*
+          Two jobs, before anything else paints.
+
+          `js` switches the reveal system on. The stylesheet keeps content
+          visible until this class exists, so scripting being off or the bundle
+          failing to load leaves a readable page instead of a blank one.
+
+          The timer is the deadline. If the reveal system has not cleared it —
+          because hydration threw, the chunk 404ed, or the device gave up —
+          every hidden element is released.
+
+          It is the first child of <body>, not of <html>. A `<script>` is not a
+          legal child of `<html>`, so the parser relocated it and React could
+          no longer line the server's tree up with the DOM: every render logged
+          "In HTML, <script> cannot be a child of <html>" and then an <html>
+          `className` mismatch it refused to patch. Here the markup is valid,
+          and the guard still does its job — the parser executes this before it
+          has read a single element of the page, which is well before React.
+        */}
+        <script
+          // Static string, no interpolation, no user input.
+          dangerouslySetInnerHTML={{
+            __html:
+              "document.documentElement.classList.add('js');" +
+              "window.__revealFailsafe=setTimeout(function(){" +
+              "document.documentElement.classList.add('reveal-failsafe')},4000);",
+          }}
+        />
         {children}
       </body>
     </html>
